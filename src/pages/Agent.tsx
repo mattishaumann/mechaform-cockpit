@@ -6,7 +6,8 @@ import { columns, RegisterTable, type Column } from '../components/RegisterTable
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { copy } from '../copy'
 import { AGENTS, type CaseKey } from '../lib/agents'
-import { getCases, getCaseTotals, getRegister, type RegisterRow } from '../lib/data'
+import { getCases, getCaseTotals, getRegister, getStats, type RegisterRow } from '../lib/data'
+import { TierYearChart, type TierYear } from '../components/TierYearChart'
 import { formatConfidence, formatEur } from '../lib/format'
 import { getNames } from '../lib/names'
 import { useQuery } from '../lib/useQuery'
@@ -40,6 +41,7 @@ function Layer({ caseName, label, testId, onRow, selectedId }: { caseName: strin
 export function Agent() {
   const { key } = useParams<{ key: CaseKey }>()
   const cases = useQuery(getCases, [])
+  const stats = useQuery(getStats, [])
   const [selected, setSelected] = useState<RegisterRow | null>(null)
   const row = cases.data?.find((c) => c.case_key === key)
   if (cases.error) return <ErrorState text={copy.cockpit.error} detail={cases.error} />
@@ -62,6 +64,7 @@ export function Agent() {
         <div className="rounded-lg border border-border bg-surface p-4 text-sm"><p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.action}</p><p className="mt-1">{row.customer_action}</p></div>
       </div>
       <p className="mt-4 text-sm text-text-muted"><span className="font-mono text-xs uppercase tracking-widest">{copy.agent.workedExample}</span> {row.calculation}</p>
+      {Boolean(config.extras?.includes('tier_year_chart') && stats.data?.tier_share_by_year) && <div className="mt-6"><TierYearChart data={stats.data.tier_share_by_year as TierYear[]} /></div>}
       {layers.map((l, i) => <Layer key={l.key} caseName={l.key} label={config.layers ? l.label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} />)}
       {selected && <EvidenceDrawer row={selected} onClose={() => setSelected(null)} />}
     </section>
