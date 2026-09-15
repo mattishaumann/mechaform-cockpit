@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# mechaform-cockpit
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Tacto-branded, read-only procurement cockpit for MechaForm GmbH. Shows the savings agents found in the 2026 order history, reading pre-computed cases, flagged rows and descriptive figures from a Supabase project. Nothing is recomputed in the browser.
 
-Currently, two official plugins are available:
+Spec of record: `~/dev/mattis-vault/cases/tacto/specs/mvp-cockpit.md`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Run locally
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+cp .env.example .env.local   # then fill in the two Supabase values
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Environment variables:
+
+| Variable | Meaning |
+|---|---|
+| `VITE_SUPABASE_URL` | Project URL, e.g. `https://<project-ref>.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | The project's anon key (public by design; the database allows select only) |
+| `VITE_ENABLED_AGENTS` | Comma-separated case keys to show, default `contract_guard,tier_guard` |
+| `VITE_RUN_INTERVAL_MS` | Interval of the simulated "last agent run" timestamp, default 60000 |
+
+## Checks
+
+`npm run check` runs typecheck, unit tests, the UI gate (`scripts/check-ui.sh`) and the Playwright suite against the live project, including the configuration, last-run, empty-state and error-state runs.
+
+## Deploy
+
+```bash
+npx vercel --prod
+```
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables in the Vercel project first. `vercel.json` carries the Vite build and the single-page rewrite.
+
+## Adding an agent
+
+One entry in `src/lib/agents.ts` (module, register layers, optional extras), its row in `mvp_cases`, its rows in `mvp_register`, then add the case key to `VITE_ENABLED_AGENTS`.
