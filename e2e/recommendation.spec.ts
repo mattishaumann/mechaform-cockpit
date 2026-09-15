@@ -41,3 +41,11 @@ test('R8 Price Radar card is internal only: NUR INTERN and no external block', a
   await expect(card.getByTestId('rec-rationale')).toContainText('Annahme')
   await expect(card.getByTestId('rec-external')).toHaveCount(0)
 })
+
+test('R26 Contract Guard names the contract owner as the responsible buyer', async ({ page }) => {
+  await page.goto('/agents/contract_guard?from=2026-01-01&to=2026-12-31')
+  await page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508565"][data-article="703947"]').click()
+  const buyer = page.getByTestId('recommendation-card').getByTestId('rec-internal').filter({ hasText: 'Einkäufer 4471' })
+  await expect(buyer).toContainText('Vertragsverantwortlich')
+  await expect(buyer).toContainText('Verantwortet Vertrag 4602358 selbst und hat ohne Vertragsbezug bestellt')
+})

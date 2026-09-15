@@ -110,6 +110,7 @@ export const copy = {
     draftNote: 'Entwurf, vor dem Versand prüfen',
     sequence: { internal_first: 'ERST INTERN', external_first: 'ERST EXTERN', internal_only: 'NUR INTERN' } as Record<string, string>,
     roleNote: 'Rolle, keine Person',
+    responsible: 'Vertragsverantwortlich',
     buyer: (id: string) => `Einkäufer ${id}`,
     category: (id: string) => `Kategorieeinkauf, Einkaufsorg. ${id}`,
     empty: 'Für diese Feststellung liegt noch keine Empfehlung vor. Den Agenten erneut ausführen, um sie zu erzeugen.',

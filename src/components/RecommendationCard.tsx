@@ -7,7 +7,7 @@ import { Pill } from './Pill'
 
 // Who a recommendation addresses. Buyers are numbers (no buyer master in the data); Finanzen and Qualität are roles, not people.
 export function recipientLabel(r: Recipient): { name: string; note: string | null } {
-  if (r.role === 'Einkäufer' && r.id) return { name: copy.reco.buyer(r.id), note: r.plant ?? null }
+  if (r.role === 'Einkäufer' && r.id) return { name: copy.reco.buyer(r.id), note: [r.plant, r.responsible ? copy.reco.responsible : null].filter(Boolean).join(', ') || null }
   if (r.role === 'Kategorieeinkauf' && r.id) return { name: copy.reco.category(r.id), note: null }
   return { name: r.role, note: copy.reco.roleNote }
 }
