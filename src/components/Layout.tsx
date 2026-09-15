@@ -24,6 +24,7 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:flex-row md:gap-8 md:px-6 md:py-8">
         <nav aria-label="Main" className="-mx-4 flex shrink-0 gap-1 overflow-x-auto px-4 md:mx-0 md:w-52 md:flex-col md:overflow-visible md:px-0">
           <NavLink to={{ pathname: '/', search: window.location.search }} end className={link}>{copy.cockpit.title}</NavLink>
+          <NavLink to={{ pathname: '/register', search: window.location.search }} className={link}>{copy.register.title}</NavLink>
           <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">Agents</p>
           {enabledAgents.map((k) => (
             <NavLink key={k} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>

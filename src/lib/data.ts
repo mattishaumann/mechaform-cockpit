@@ -79,6 +79,23 @@ export async function getRegister(runId: number, page: number, pageSize: number)
   return { rows, count: count ?? rows.length }
 }
 
+// Findings of the latest runs for a period across agents, optionally only those that land on one internal role.
+export async function getRegisterLatest(period: Period, agents: string[], role: string | null, page: number, pageSize: number): Promise<RegisterRow[]> {
+  const from = page * pageSize
+  let q = supabase.from('v_register_latest').select('*').eq('period_start', period.from).eq('period_end', period.to).in('agent', agents)
+  if (role) q = q.filter('recommendation->internal', 'cs', JSON.stringify([{ role }]))
+  const { data, error } = await q.order('gap_eur', { ascending: false }).order('id').range(from, from + pageSize - 1)
+  fail(error)
+  return (data ?? []).map((r) => num(r as RegisterRow, ['volume', 'baseline', 'target', 'gap_eur']))
+}
+
+export async function getRegisterTotals(period: Period, agents: string[], role: string | null): Promise<{ rows: number; total: number }> {
+  const { data, error } = await supabase.rpc('register_totals', { p_start: period.from, p_end: period.to, p_agents: agents, p_role: role })
+  fail(error)
+  const r = (data as { rows: number; total: number }[] | null)?.[0]
+  return { rows: toNumber(r?.rows), total: toNumber(r?.total) }
+}
+
 export async function getTrend(runId: number): Promise<TrendRow[]> {
   const { data, error } = await supabase.from('v_agent_trend').select('*').eq('run_id', runId).order('month')
   fail(error)

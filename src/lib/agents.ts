@@ -16,7 +16,7 @@ export const AGENTS: Record<CaseKey, AgentConfig> = {
   preferred_steering: { key: 'preferred_steering', module: 'Supplier Intelligence' },
 }
 
-const raw = (import.meta.env.VITE_ENABLED_AGENTS as string | undefined) ?? 'contract_guard,tier_guard'
+const raw = (import.meta.env.VITE_ENABLED_AGENTS as string | undefined) ?? 'contract_guard,tier_guard,terms_floor,price_radar,preferred_steering'
 export const enabledAgents: CaseKey[] = raw
   .split(',')
   .map((s) => s.trim())

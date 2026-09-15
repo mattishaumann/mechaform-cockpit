@@ -90,6 +90,17 @@ export const copy = {
     subject: 'Betreff',
   },
   runs: { title: 'Run log', none: 'No runs yet.' },
+  register: {
+    title: 'Register',
+    subtitle: 'Every finding of the latest runs for the period, with who has to act. Filter by recipient to see what lands on one role.',
+    filterLabel: 'Recipient',
+    all: 'All recipients',
+    empty: 'No findings for this period yet. Run the agents to fill the register.',
+    emptyRole: (role: string) => `No finding in this period lands on ${role}.`,
+    runAll: 'Run all agents for this period',
+    agent: 'Agent',
+    finding: 'Finding',
+  },
   table: {
     order: 'Order',
     date: 'Date',

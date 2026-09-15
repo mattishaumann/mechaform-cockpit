@@ -22,6 +22,8 @@ export const columns = {
   target: { key: 'target', label: copy.table.target, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
   gap: { key: 'gap', label: copy.table.gap, render: (r: RegisterRow) => formatEur(r.gap_eur), align: 'right' as const },
   status: { key: 'status', label: 'Status', render: (r: RegisterRow) => r.status },
+  agent: { key: 'agent', label: copy.register.agent, render: (r: RegisterRow) => r.case },
+  finding: { key: 'finding', label: copy.register.finding, render: (r: RegisterRow, n: Names) => [r.order_no ? `Order ${r.order_no}` : '', r.article_no ? `${n.articles[r.article_no] ?? ''} ${r.article_no}`.trim() : '', r.supplier_no ? n.suppliers[r.supplier_no] ?? String(r.supplier_no) : ''].filter(Boolean).join(', ') },
   recommendation: { key: 'recommendation', label: copy.reco.column, render: (r: RegisterRow) => (r.recommendation?.internal ?? []).map((x) => recipientLabel(x).name).join(', ') },
 } satisfies Record<string, Column>
 
