@@ -30,5 +30,5 @@ test('A10 status pill changes on simulated send and a feed entry appears', async
   await expect(actions.getByTestId('status-pill')).toHaveAttribute('data-status', 'sent_simulated')
   await expect(row.getByTestId('status-pill')).toHaveAttribute('data-status', 'sent_simulated', { timeout: 10_000 })
   await page.goto('/')
-  await expect(page.getByTestId('activity-feed').locator('li').first()).toContainText('marked as sent (simulated)')
+  await expect(page.getByTestId('activity-feed').locator('li').filter({ hasText: 'marked as sent (simulated)' }).first()).toBeVisible()
 })
