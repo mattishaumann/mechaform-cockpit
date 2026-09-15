@@ -51,6 +51,12 @@ Every finding carries a `recommendation` (jsonb on `mvp_register`), filled in SQ
 
 "Aufgabe anlegen" writes a row to `mvp_tasks` through `create_task` (idempotent per finding and recipient) and moves the finding to "in Bearbeitung"; nothing is sent. Thresholds and due days live in `mvp_config`.
 
+## Negotiation trainer (preview)
+
+`/trainer` lets a buyer practise a negotiation with Getriebebau Arnold on the 2026 data. The input is the supplier brief, English fact lines built by rules from the register (`v_supplier_brief`: spend, Contract Guard, Terms Floor, Preferred Steering, contract end date). One Edge Function, `trainer-turn`, answers each buyer message in one forced tool call: the supplier's key account manager (concedes in steps, trades for renewal or payment discipline, may only use numbers from the brief or the buyer's message) and a coach card (strong, ok or weak, one tactic, the next fact to use). Same harness as `draft-action`: the brief, earlier turns and the typed message sit in `<untrusted_data>` blocks declared content, a canary catches leaked instructions, post-checks reject invented numbers, unknown fact ids, dashes and exclamation marks, and every call is logged with session `trainer:<id>` in the shared 3.50 USD budget.
+
+The stored session (five scripted buyer messages, answers generated once) replays from `mvp_trainer_turns` without any model call; the presenter steps through it with "Next turn". After it, one live turn per session (`start_live_session` branches from the stored one; a second turn is refused with `live_turn_used`). `node scripts/trainer-seed.mjs` seeds or completes the stored session and prints the spend.
+
 ## Checks
 
 `npm run check` runs typecheck, unit tests, the UI gate (`scripts/check-ui.sh`) and the Playwright suite against the live project, including the three-agent and five-agent configuration runs and the empty-state and error-state runs. The live tests trigger real agent runs on the project. Because findings keep their ids across reruns, the tests that create a task reset it first through the linked Supabase CLI (`e2e/db.ts`), so the CLI must be logged in and linked (`supabase link`). Database checks for spec mvp-recommendations: `python3 supabase/reco_checks.py R1 R3 R4 R5 R6 R7 R22` in the dataset folder.
