@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e',
+  workers: 1,   // the live tests trigger real agent runs on one shared database; never overlap them
+  fullyParallel: false,
   timeout: 30_000,
   use: { baseURL: 'http://localhost:5173', headless: true },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],

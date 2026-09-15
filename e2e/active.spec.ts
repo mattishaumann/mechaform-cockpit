@@ -19,13 +19,14 @@ test('A9 activity feed shows the latest ten events, newest first', async ({ page
 })
 
 test('A10 status pill changes on simulated send and a feed entry appears', async ({ page }) => {
-  await page.goto('/agents/contract_guard?from=2026-01-01&to=2026-12-31')
-  const row = page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="600924"][data-article="703947"]')
-  await expect(row.getByTestId('status-pill')).toBeVisible()
+  // own period so concurrent tests that re-run the 2026 agents cannot replace the rows under this test
+  await page.goto('/agents/contract_guard?from=2026-04-01&to=2026-06-30')
+  await page.getByTestId('run-agent').click()
+  await expect(page.getByTestId('run-agent')).toBeEnabled({ timeout: 60_000 })
+  const row = page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508568"][data-article="703947"]')
+  await expect(row.getByTestId('status-pill')).toHaveAttribute('data-status', 'open', { timeout: 20_000 })
   await row.click()
   const actions = page.getByTestId('finding-actions')
-  if (await actions.getByRole('button', { name: 'Wieder öffnen' }).count()) await actions.getByRole('button', { name: 'Wieder öffnen' }).click()
-  await expect(actions.getByTestId('status-pill')).toHaveAttribute('data-status', 'open')
   await actions.getByRole('button', { name: 'Als gesendet markieren (Simulation)' }).click()
   await expect(actions.getByTestId('status-pill')).toHaveAttribute('data-status', 'sent_simulated')
   await expect(row.getByTestId('status-pill')).toHaveAttribute('data-status', 'sent_simulated', { timeout: 10_000 })
