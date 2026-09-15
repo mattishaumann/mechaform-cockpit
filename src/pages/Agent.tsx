@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import { Button } from '../components/Button'
 import { EvidenceDrawer } from '../components/EvidenceDrawer'
 import { HowPanel } from '../components/HowPanel'
+import { IndexGuardPanel } from '../components/IndexGuardPanel'
+import { indexLayerColumns } from '../lib/indexGuard'
 import { Pill } from '../components/Pill'
 import { columns, RegisterTable, type Column } from '../components/RegisterTable'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
@@ -28,6 +30,7 @@ const layerColumns: Record<string, Column[]> = {
   'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
   'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
   'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
+  ...indexLayerColumns,   // preview agent Index Guard
 }
 
 function Findings({ run, label, testId, onRow, selectedId, live, revealIds }: { run: RunRow; label?: string; testId: string; onRow?: (r: RegisterRow) => void; selectedId?: number; live: number; revealIds: Set<number> }) {
@@ -111,10 +114,11 @@ export function Agent() {
         {main && config.chart === 'bridge' && <TermsBridge data={chart.bridge ?? null} rate={cfgValue(params, 'financing_rate')} day={cfgValue(params, 'skonto_days')} />}
         {main && config.chart === 'indexed_line' && <PriceIndexChart rows={chart.index ?? []} />}
         {main && config.chart === 'comparison_cards' && <ComparisonCards rows={chart.top ?? []} names={chart.names ?? { suppliers: {}, articles: {} }} onRow={setSelected} />}
+        {config.chart === 'index_basket' && <IndexGuardPanel runId={main?.id ?? null} />}
       </div>
       <HowPanel row={row} params={params} />
       {!main && <div className="mt-6"><EmptyState text={copy.agent.noRun} /></div>}
-      {layerRuns.map((r, i) => <Findings key={r.id} run={r} label={layers.length > 1 ? layers[i].label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} live={live} revealIds={revealIds} />)}
+      {layerRuns.map((r, i) => <Findings key={r.id} run={r} label={layers.length > 1 ? layers[i].label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 || key === 'index_guard' ? setSelected : undefined} selectedId={selected?.id} live={live} revealIds={revealIds} />)}
       {selected && <EvidenceDrawer row={selected} period={period} onClose={() => setSelected(null)} onStatus={(st) => { setSelected({ ...selected, status: st }); setLive((n) => n + 1) }} />}
     </section>
   )

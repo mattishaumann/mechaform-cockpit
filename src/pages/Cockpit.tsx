@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { AgentCard } from '../components/AgentCard'
+import { PreviewStrip } from '../components/PreviewStrip'
 import { Button } from '../components/Button'
 import { Pill } from '../components/Pill'
 import { RunLog } from '../components/RunLog'
@@ -98,6 +99,7 @@ export function Cockpit() {
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {shown.map((c) => <AgentCard key={c.case_key} row={c} runs={data.runs} search={search} openTasks={data.tasks[c.case_key] ?? 0} onSwitched={refresh} />)}
       </div>
+      <PreviewStrip cases={data.cases} runs={data.runs} search={search} />
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <div><h2 className={label}>{copy.feed.title}</h2><div className="mt-2"><ActivityFeed events={data.events} /></div></div>
         <div><h2 className={label}>{copy.runs.title}</h2><div className="mt-2"><RunLog runs={data.log} /></div></div>

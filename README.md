@@ -79,3 +79,30 @@ The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three b
 
 Drafts survive agent re-runs because a rerun keeps each finding's id (`supabase/sql/reco_harness.sql` in the dataset folder replaced the earlier carry-over in `active_carry.sql`). "Run all agents" therefore never discards the precomputed drafts.
 
+
+## Index Guard (preview)
+
+A sixth agent that checks prices against a cost index instead of an assumed flat rate (spec `mvp-index-guard` in the vault). For every supplier and article pair it escalates the base-year price with a cost basket of the article's category, the price escalation formula German contracts use:
+
+```
+index price = base-year price x (fixed share + sum of weight x index now / index at base)
+finding     = paid price > index price x (1 + index_tolerance)     gap counts only above that band
+```
+
+It writes two layers, every order line and every contract position, so it names the exact orders and contracts that are off the index. It runs as a preview: listed under "Preview" in the navigation and as a strip under the strategy cards, `enabled = false` in `mvp_cases`, never part of hard savings, cost avoidance or gross.
+
+**The index data is a sample.** The series in `index_series` are generated for this MVP from a few anchor points; each one names the published series it stands in for (Destatis producer prices, LME metals, the negotiated wage index). The basket weights in `category_index_map` and the 3% tolerance are judgement. Weights, tolerance and the base-price rule need tuning with real data before any supplier conversation; the page and every finding say so.
+
+Replacing the sample with a real feed needs no code change. Put three CSVs in a folder and load them:
+
+```
+index_definitions.csv   index_code, name, stands_in_for, unit, source, is_sample (false for a real feed)
+index_series.csv        index_code, month (YYYY-MM-01), value, source
+category_index_map.csv  category_no ('*' = default), material_type ('' = any), component (index_code or FIXED), weight, note
+```
+
+```bash
+python3 supabase/index/load_index.py --dir path/to/feed   # run from the dataset folder; the sample lives in supabase/index/
+```
+
+Then rerun the agent. Months missing from a feed carry the last value forward. Database objects: `supabase/sql/index_schema.sql`, `supabase/sql/index_functions.sql` in the dataset folder. Checks: `node scripts/index-guard-check.mjs` (recomputes index prices independently) and `e2e/index-guard.spec.ts`.

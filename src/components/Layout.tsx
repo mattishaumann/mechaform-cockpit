@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Brand } from './Brand'
 import { PeriodSelector } from './PeriodSelector'
 import { copy } from '../copy'
-import { AGENTS, enabledAgents } from '../lib/agents'
+import { AGENTS, enabledAgents, previewAgents } from '../lib/agents'
 
 const link = 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none block whitespace-nowrap rounded-md px-3 py-2 text-sm text-text-muted no-underline transition-colors duration-fast hover:bg-surface-hover hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:font-medium md:whitespace-normal'
 
@@ -28,6 +28,10 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
           <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">Agents</p>
           {enabledAgents.map((k) => (
             <NavLink key={k} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
+          ))}
+          {previewAgents.length > 0 && <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">{copy.index.previewNav}</p>}
+          {previewAgents.map((k) => (
+            <NavLink key={k} data-testid={`nav-preview-${k}`} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
           ))}
         </nav>
         <main className="min-w-0 flex-1">{children}</main>
