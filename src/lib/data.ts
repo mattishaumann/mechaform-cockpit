@@ -90,3 +90,23 @@ export function subscribe(onRegister: (row: RegisterRow) => void, onRun: (row: R
     .subscribe()
   return () => { supabase.removeChannel(channel) }
 }
+
+export interface DraftPayload { language: string; document_type: string; refused: boolean; refusal_reason: string; draft: { subject: string; salutation: string; body: string[]; closing: string }; claims_used: { claim: string; order_nos: string[] }[]; numbers_used: { value: string; unit: string; source_field: string }[]; confidence_note: string }
+export interface DraftResponse { draft?: DraftPayload; draft_id?: number; cached?: boolean; created_at?: string; error?: string; reasons?: string[]; spent_usd?: number; usage?: { est_cost_usd: number; spent_usd: number } }
+
+export async function draftAction(registerId: number, task: 'draft_supplier_message' | 'explain_for_cfo', force = false): Promise<DraftResponse> {
+  const { data, error } = await supabase.functions.invoke<DraftResponse>('draft-action', { body: { register_id: registerId, task, force } })
+  if (error && !data) {
+    // non-2xx responses carry the JSON body in the error context
+    const ctx = (error as { context?: Response }).context
+    if (ctx) { try { return (await ctx.json()) as DraftResponse } catch { /* fall through */ } }
+    throw new Error(error.message)
+  }
+  return data ?? {}
+}
+
+export async function getCachedDraft(registerId: number, task: string): Promise<{ id: number; payload: DraftPayload; created_at: string } | null> {
+  const { data, error } = await supabase.from('mvp_drafts').select('id,payload,created_at').eq('register_id', registerId).eq('task', task).order('id', { ascending: false }).limit(1).maybeSingle()
+  fail(error)
+  return data as { id: number; payload: DraftPayload; created_at: string } | null
+}

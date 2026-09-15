@@ -2,11 +2,14 @@ import { useEffect } from 'react'
 import type { Period } from '../lib/period'
 import type { OrderLine, RegisterRow } from '../lib/data'
 import { getOrderLines } from '../lib/data'
+import { supabase } from '../lib/supabase'
+import { useState } from 'react'
 import { formatEur, formatInt, formatPrice } from '../lib/format'
 import { useQuery } from '../lib/useQuery'
 import { copy } from '../copy'
 import { Button } from './Button'
 import { FindingActions } from './FindingActions'
+import { DraftPanel } from './DraftPanel'
 import { Pill } from './Pill'
 import { ErrorState, Skeleton } from './States'
 
@@ -14,9 +17,14 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
   const q = useQuery<OrderLine[]>(() => getOrderLines(row.supplier_no ?? 0, row.article_no ?? 0, period), [row.id, period.from, period.to])
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
   const lines = q.data ?? []
+  const [contractNo, setContractNo] = useState<string | null>(null)
+  useEffect(() => {
+    if (row.case !== 'Contract Guard' || row.supplier_no == null || row.article_no == null) { setContractNo(null); return }
+    supabase.from('framework_contracts').select('contract_no').eq('supplier_no', row.supplier_no).eq('article_no', row.article_no).limit(1).maybeSingle().then(({ data }) => setContractNo(data?.contract_no ?? null))
+  }, [row.id, row.case, row.supplier_no, row.article_no])
   return (
     <aside role="dialog" aria-modal="true" aria-label={copy.agent.evidenceDrawer} data-testid="evidence-drawer"
-      className="fixed inset-y-0 right-0 z-10 flex w-full max-w-2xl flex-col border-l border-border bg-surface shadow-lg motion-safe:animate-[drawer_200ms_var(--ease-out-quart)]">
+      className="fixed inset-y-0 right-0 z-10 flex w-full max-w-4xl flex-col border-l border-border bg-surface shadow-lg motion-safe:animate-[drawer_200ms_var(--ease-out-quart)]">
       <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
         <div>
           <p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.evidenceDrawer.replace('2026', `${period.from} to ${period.to}`)}</p>
@@ -47,6 +55,7 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
             </tbody>
           </table>
         )}
+        {!q.loading && !q.error && <DraftPanel row={row} lines={lines} contractNo={contractNo} onStatus={onStatus} />}
       </div>
     </aside>
   )

@@ -49,3 +49,19 @@ Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables in
 ## Adding an agent
 
 One entry in `src/lib/agents.ts` (module, register layers, optional extras), its row in `mvp_cases`, its rows in `mvp_register`, then add the case key to `VITE_ENABLED_AGENTS`.
+
+## Language-model drafts
+
+One Supabase Edge Function, `draft-action`, turns a finding's evidence into a German supplier message (Belastungsanzeige, Preiskorrektur, Konditionenanfrage) or an internal briefing (Verhandlungsbriefing) for the internal-only cases. The rules computed every number; the model only writes language from the payload it receives and must echo every number it uses with its source field. The function checks the answer (numbers present in the input, orders present in the evidence, no forbidden words, no recovery language in briefings), stores passing drafts in `mvp_drafts`, logs every call with an estimated cost in `mvp_llm_calls`, serves cached drafts first, and stops at a cumulative 3.50 USD. Model: Haiku 4.5, 700 output tokens, cached system block.
+
+Secrets, set once by hand and never committed:
+
+```bash
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+```
+
+```bash
+echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env.local
+```
+
+The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three brief cases once against the API; `npm run llm:precompute` drafts the three highest-gap findings per case and prints the spend, stopping above 1 USD. In the app, "Aktion entwerfen" on a finding shows the draft next to its evidence; "Als gesendet markieren (Simulation)" only changes the status and never sends anything.
