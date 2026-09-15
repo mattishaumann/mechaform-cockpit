@@ -21,12 +21,23 @@ test('A9 activity feed shows the latest ten events, newest first', async ({ page
 test('A10 status pill changes on simulated send and a feed entry appears', async ({ page }) => {
   // own period so concurrent tests that re-run the 2026 agents cannot replace the rows under this test
   await page.goto('/agents/contract_guard?from=2026-04-01&to=2026-06-30')
+  const table = page.getByTestId('register-contract_guard-0')
+  await expect(table).toBeVisible()
+  const previousRun = await table.getAttribute('data-run-id')
   await page.getByTestId('run-agent').click()
   await expect(page.getByTestId('run-agent')).toBeEnabled({ timeout: 60_000 })
-  const row = page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508568"][data-article="703947"]')
-  await expect(row.getByTestId('status-pill')).toHaveAttribute('data-status', 'open', { timeout: 20_000 })
+  // the register must show the fresh run's rows (new ids) before a row is opened
+  await expect(table).not.toHaveAttribute('data-run-id', previousRun ?? '', { timeout: 20_000 })
+  const row = table.locator('tbody tr[data-order="508568"][data-article="703947"]')
+  await expect(row.getByTestId('status-pill')).toBeVisible({ timeout: 20_000 })
   await row.click()
   const actions = page.getByTestId('finding-actions')
+  // statuses survive re-runs since active_carry.sql, so a previous run of this test leaves the row marked as sent: reopen it first
+  if ((await row.getByTestId('status-pill').getAttribute('data-status')) !== 'open') {
+    await actions.getByRole('button', { name: 'Wieder öffnen' }).click()
+    await expect(actions.getByTestId('status-pill')).toHaveAttribute('data-status', 'open')
+  }
+  await expect(row.getByTestId('status-pill')).toHaveAttribute('data-status', 'open', { timeout: 10_000 })
   await actions.getByRole('button', { name: 'Als gesendet markieren (Simulation)' }).click()
   await expect(actions.getByTestId('status-pill')).toHaveAttribute('data-status', 'sent_simulated')
   await expect(row.getByTestId('status-pill')).toHaveAttribute('data-status', 'sent_simulated', { timeout: 10_000 })

@@ -58,6 +58,7 @@ test('L13 dashboard order and fold-out explanation', async ({ page }) => {
   await expect(page.getByTestId('trend-chart')).toBeVisible()
   await page.getByRole('button', { name: 'How this agent works' }).click()
   await expect(page.getByTestId('how-panel')).toContainText('Attach the agreement')
+  await expect(page.getByTestId('register-contract_guard-0')).toBeVisible({ timeout: 20_000 })   // the register loads last; measure only once it is there
   const order = await page.evaluate(() => ['run-agent', 'kpi-gap', 'trend-chart', 'register-contract_guard-0'].map((id) => document.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect().top ?? -1))
   expect(order).toEqual([...order].sort((a, b) => a - b))
 })
