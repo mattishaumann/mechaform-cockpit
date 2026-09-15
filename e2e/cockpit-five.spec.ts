@@ -3,7 +3,8 @@ import { sql } from './db'
 
 const AGENTS = ['contract_guard', 'tier_guard', 'terms_floor', 'price_radar', 'preferred_steering']
 
-test.afterEach(() => { sql('update mvp_cases set enabled = true where not enabled') })   // a failed switch test must not leave an agent off
+// a failed switch test must not leave one of its agents off; other agents (Index Guard preview) keep their own switch
+test.afterEach(() => { sql(`update mvp_cases set enabled = true where not enabled and case_key in (${AGENTS.map((a) => `'${a}'`).join(', ')})`) })
 
 test('R11 five agent cards with summary, on/off switch and open-task counter', async ({ page }) => {
   await page.goto('/?from=2026-01-01&to=2026-12-31')

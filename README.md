@@ -24,10 +24,16 @@ Environment variables:
 
 Each agent is a Postgres function in the Supabase project (`run_contract_guard`, `run_tier_guard` plus its annual layer, `run_terms_floor`, `run_price_radar`, `run_preferred_steering`), reached through one entry point `run_agent(agent, period_start, period_end)`. A run upserts its findings into `mvp_register` on a natural key (case, order and position for line-level findings; case, supplier and article for pair-level ones; always with the period), prunes the findings of that case and period it no longer produces, records itself in `agent_runs`, and stores its gap-by-month trend in `agent_trend`. Register ids, statuses, drafts and tasks therefore survive reruns. The functions are security definer; the anon role can call `run_agent` and read, but cannot write tables directly. The browser subscribes to `mvp_register` and `agent_runs` through Supabase Realtime, so findings and run status appear without a reload. The period comes from the URL (`?from=&to=`), default calendar 2026, with year, quarter and month presets and a custom range. Nothing is computed in the browser.
 
+## Cockpit and agent pages
+
+The cockpit headline is **hard savings**: one primary case per article at case level (Contract Guard, Tier Guard as the larger of its two overlapping layers, Preferred Steering) plus Terms Floor, from the view `v_savings_split`. Price Radar is shown apart as cost avoidance against an assumed index path; exposures (contract cliff, blocked-supplier spend) are shown apart again. Each agent card has an on/off switch (`set_agent_enabled`, stored in `mvp_cases.enabled`): a switched-off agent is muted, skipped by "Run all agents" and left out of the headline. `VITE_ENABLED_AGENTS` still decides which agents a deployment shows at all (default: all five).
+
+Each agent page has one chart, read from views over the run's own findings: a contract table (Contract Guard, `v_contract_guard_contracts`), the tier column chart (Tier Guard, `mvp_stats`), a bridge from Skonto gained to net gain (Terms Floor, `v_terms_floor_bridge`), the flagged articles' price index against the assumed path (Price Radar, `v_price_radar_index`) and comparison cards preferred against cheapest supplier (Preferred Steering). Every row opens the evidence drawer with the recommendation card. The register page lists all findings of the latest runs for the period and filters by the role a recommendation addresses. Thresholds (tolerances, index rate, financing rate, Skonto day, on-time margin, due days) live in `mvp_config` and show in each agent's explanation panel.
+
 ## Adding an agent
 
 1. Write `run_<agent>(p_start date, p_end date)` in `supabase/sql/reco_harness.sql` following the existing ones (open a run, upsert findings with `run_id` on the finding key, close the run) and add its branch to `run_agent`.
-2. Add its row to `mvp_cases` (name, rule, trigger, evidence, calculation, action, confidence) and its entry in `src/lib/agents.ts` (module, register layers, optional extras).
+2. Add its row to `mvp_cases` (name, summary, rule, trigger, evidence, calculation, action, action_type, confidence), its recommendation template in `fill_recommendations` (`supabase/sql/reco_recommend.sql`) and its entry in `src/lib/agents.ts` (module, register layers, chart).
 3. Add the case key to `VITE_ENABLED_AGENTS`.
 
 ## Parity with the notebook
@@ -47,7 +53,7 @@ Every finding carries a `recommendation` (jsonb on `mvp_register`), filled in SQ
 
 ## Checks
 
-`npm run check` runs typecheck, unit tests, the UI gate (`scripts/check-ui.sh`) and the Playwright suite against the live project, including the three-agent and five-agent configuration runs and the empty-state and error-state runs. The live tests trigger real agent runs on the project.
+`npm run check` runs typecheck, unit tests, the UI gate (`scripts/check-ui.sh`) and the Playwright suite against the live project, including the three-agent and five-agent configuration runs and the empty-state and error-state runs. The live tests trigger real agent runs on the project. Because findings keep their ids across reruns, the tests that create a task reset it first through the linked Supabase CLI (`e2e/db.ts`), so the CLI must be logged in and linked (`supabase link`). Database checks for spec mvp-recommendations: `python3 supabase/reco_checks.py R1 R3 R4 R5 R6 R7 R22` in the dataset folder.
 
 ## Deploy
 
@@ -57,13 +63,9 @@ npx vercel --prod
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables in the Vercel project first. `vercel.json` carries the Vite build and the single-page rewrite.
 
-## Adding an agent
-
-One entry in `src/lib/agents.ts` (module, register layers, optional extras), its row in `mvp_cases`, its rows in `mvp_register`, then add the case key to `VITE_ENABLED_AGENTS`.
-
 ## Language-model drafts
 
-One Supabase Edge Function, `draft-action`, turns a finding's evidence into a German supplier message (Belastungsanzeige, Preiskorrektur, Konditionenanfrage) or an internal briefing (Verhandlungsbriefing) for the internal-only cases. The rules computed every number; the model only writes language from the payload it receives and must echo every number it uses with its source field. The function checks the answer (numbers present in the input, orders present in the evidence, no forbidden words, no recovery language in briefings), stores passing drafts in `mvp_drafts`, logs every call with an estimated cost in `mvp_llm_calls`, serves cached drafts first, and stops at a cumulative 3.50 USD. Model: Haiku 4.5, 700 output tokens, cached system block.
+One Supabase Edge Function, `draft-action`, turns a finding's evidence into a German supplier message (Belastungsanzeige, Preiskorrektur, Konditionenanfrage). Since the scope reset the app calls it only from the recommendation card's external block ("Entwurf erstellen"), so the model writes text only where the channel is an email; the internal-only cases (Price Radar, Preferred Steering) get no model call. The harness passes a fixed payload: a TASK line (task, language, output limits) and an `<untrusted_data>` block with the finding's numbers, evidence, recommendation and facts; the system prompt declares every string in that block content, never instructions, and `<` is escaped so no supplier name can close the block. The rules computed every number; the model only writes language from the payload it receives and must echo every number it uses with its source field. The function checks the answer (numbers present in the input, orders present in the evidence, no forbidden words, no recovery language in briefings), stores passing drafts in `mvp_drafts` with their input, logs every call with its session key (`draft:<register_id>:<task>`), input, raw output and estimated cost in `mvp_llm_calls`, serves cached drafts first, and stops at a cumulative 3.50 USD. Model: Haiku 4.5, 700 output tokens, cached system block.
 
 Secrets, set once by hand and never committed:
 
@@ -75,7 +77,7 @@ supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env.local
 ```
 
-The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three brief cases once against the API; `npm run llm:precompute` drafts the three highest-gap findings per case and prints the spend, stopping above 1 USD. In the app, "Aktion entwerfen" on a finding shows the draft next to its evidence; "Als gesendet markieren (Simulation)" only changes the status and never sends anything.
+The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three brief cases once against the API; `npm run llm:precompute` drafts the three highest-gap findings per case and prints the spend, stopping above 1 USD; `npm run llm:demo` regenerates the two drafts the demo opens (Contract Guard 508565, Terms Floor Getriebebau Arnold) and prints their cost. In the app, "Aktion entwerfen" on a finding shows the draft next to its evidence; "Als gesendet markieren (Simulation)" only changes the status and never sends anything.
 
 Drafts survive agent re-runs because a rerun keeps each finding's id (`supabase/sql/reco_harness.sql` in the dataset folder replaced the earlier carry-over in `active_carry.sql`). "Run all agents" therefore never discards the precomputed drafts.
 

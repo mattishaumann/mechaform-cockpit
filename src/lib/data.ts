@@ -6,8 +6,8 @@ export interface CaseRow { case_key: string; name: string; trigger: string; rule
 export interface SavingsSplit { hard: number; cost_avoidance: number; gross: number; hard_contract_guard: number; hard_tier_guard: number; hard_preferred_steering: number; hard_terms_floor: number }
 export interface ConfigRow { key: string; value: number; unit: string; label: string; case_key: string | null; note: string | null }
 export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number; lines_checked: number | null }
-export interface Recipient { role: string; id: string | null; plant?: string; why: string; how: 'task'; due_days: number }
-export interface Recommendation { internal: Recipient[]; external: { recipient: string; document_type: string; how: 'email_draft' } | null; sequence: 'internal_first' | 'external_first' | 'internal_only'; rationale: string }
+export interface Recipient { role: string; id: string | null; plant?: string; responsible?: boolean; why: string; how: 'task'; due_days: number }
+export interface Recommendation { title?: string; internal: Recipient[]; external: { recipient: string; document_type: string; how: 'email_draft' } | null; sequence: 'internal_first' | 'external_first' | 'internal_only'; rationale: string }
 export interface RegisterRow { id: number; case: string; order_no: number | null; order_position: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null; action_type: string | null; status: string; draft_id: number | null; recommendation: Recommendation | null; detail: Record<string, unknown> | null }
 export interface TaskRow { id: number; register_id: number | null; case_key: string; role: string; recipient_id: string | null; why: string; due_date: string; status: 'open' | 'done'; created_at: string }
 export interface EventRow { id: number; created_at: string; case_key: string | null; register_id: number | null; event_type: string; message: string }
@@ -173,7 +173,8 @@ export function subscribe(onRegister: (row: RegisterRow) => void, onRun: (row: R
 }
 
 export interface DraftPayload { language: string; document_type: string; refused: boolean; refusal_reason: string; draft: { subject: string; salutation: string; body: string[]; closing: string }; claims_used: { claim: string; order_nos: string[] }[]; numbers_used: { value: string; unit: string; source_field: string }[]; confidence_note: string }
-export interface DraftResponse { draft?: DraftPayload; draft_id?: number; cached?: boolean; created_at?: string; error?: string; reasons?: string[]; spent_usd?: number; usage?: { est_cost_usd: number; spent_usd: number } }
+export interface DraftResponse { draft?: DraftPayload; draft_id?: number; cached?: boolean; created_at?: string; evidence_count?: number; error?: string; reasons?: string[]; spent_usd?: number; usage?: { est_cost_usd: number; spent_usd: number } }
+export interface DraftInput { facts?: { evidence_rows?: unknown[] } }
 
 export async function draftAction(registerId: number, task: 'draft_supplier_message' | 'explain_for_cfo', force = false): Promise<DraftResponse> {
   const { data, error } = await supabase.functions.invoke<DraftResponse>('draft-action', { body: { register_id: registerId, task, force } })
@@ -186,8 +187,8 @@ export async function draftAction(registerId: number, task: 'draft_supplier_mess
   return data ?? {}
 }
 
-export async function getCachedDraft(registerId: number, task: string): Promise<{ id: number; payload: DraftPayload; created_at: string } | null> {
-  const { data, error } = await supabase.from('mvp_drafts').select('id,payload,created_at').eq('register_id', registerId).eq('task', task).order('id', { ascending: false }).limit(1).maybeSingle()
+export async function getCachedDraft(registerId: number, task: string): Promise<{ id: number; payload: DraftPayload; created_at: string; input: DraftInput | null } | null> {
+  const { data, error } = await supabase.from('mvp_drafts').select('id,payload,created_at,input').eq('register_id', registerId).eq('task', task).order('id', { ascending: false }).limit(1).maybeSingle()
   fail(error)
-  return data as { id: number; payload: DraftPayload; created_at: string } | null
+  return data as { id: number; payload: DraftPayload; created_at: string; input: DraftInput | null } | null
 }
