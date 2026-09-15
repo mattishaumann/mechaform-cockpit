@@ -41,11 +41,12 @@ export function DraftPanel({ row, lines, contractNo, onStatus }: { row: Register
   const [locked, setLocked] = useState(false)   // budget exhausted or key missing: cached drafts only
   const [animate, setAnimate] = useState(false)
   const [highlight, setHighlight] = useState<Set<string>>(new Set())
+  const [evidenceCount, setEvidenceCount] = useState<number | null>(null)   // rows the model received, stored with the draft
 
   useEffect(() => {
     let alive = true
     setState('loading'); setMessage(null)
-    getCachedDraft(row.id, task).then((c) => { if (!alive) return; if (c) { setDraft(c.payload); setAnimate(true); setState('ready') } else { setDraft(null); setState('idle') } }).catch((e: Error) => { if (alive) { setMessage(e.message); setState('error') } })
+    getCachedDraft(row.id, task).then((c) => { if (!alive) return; if (c) { setDraft(c.payload); setEvidenceCount(c.input?.facts?.evidence_rows?.length ?? null); setAnimate(true); setState('ready') } else { setDraft(null); setState('idle') } }).catch((e: Error) => { if (alive) { setMessage(e.message); setState('error') } })
     return () => { alive = false }
   }, [row.id, task])
 
@@ -56,7 +57,7 @@ export function DraftPanel({ row, lines, contractNo, onStatus }: { row: Register
     if (res.error === 'missing_api_key') { setLocked(true); setMessage(copy.draft.missingKey); setState(draft ? 'ready' : 'idle'); return }
     if (res.error === 'rejected') { setMessage(`${copy.draft.rejected} ${(res.reasons ?? []).join('; ')}`); setState(draft ? 'ready' : 'error'); return }
     if (res.error || !res.draft) { setMessage(res.error ?? 'unknown'); setState('error'); return }
-    setDraft(res.draft); setAnimate(true); setState('ready')
+    setDraft(res.draft); setEvidenceCount(res.evidence_count ?? null); setAnimate(true); setState('ready')
     if (!res.draft.refused && row.status === 'open') onStatus('draft_ready')
   }
   const claimsFor = (paragraph: string) => new Set((draft?.claims_used ?? []).filter((c) => paragraph.includes(c.claim.slice(0, 24)) || c.order_nos.some((o) => paragraph.includes(o))).flatMap((c) => c.order_nos))
@@ -67,7 +68,7 @@ export function DraftPanel({ row, lines, contractNo, onStatus }: { row: Register
       <header className="border-b border-border px-5 py-4">
         <p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.draft.open}</p>
         <h3 data-testid="draft-header" className="mt-1 text-lg font-semibold">{copy.draft.header}</h3>
-        <p data-testid="draft-made-from" className="text-sm text-text-muted">{copy.draft.madeFrom(lines.length, contractNo)}</p>
+        <p data-testid="draft-made-from" className="text-sm text-text-muted">{copy.draft.madeFrom(evidenceCount ?? lines.length, contractNo)}</p>
         <p data-testid="draft-numbers-line" className="mt-1 text-sm text-text-muted">{copy.draft.numbersLine}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button onClick={() => request(Boolean(draft))} disabled={locked || state === 'loading'} loading={state === 'loading'}>{draft ? copy.draft.redo : copy.draft.open}</Button>
