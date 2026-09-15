@@ -8,11 +8,10 @@ export interface ConfigRow { key: string; value: number; unit: string; label: st
 export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number; lines_checked: number | null }
 export interface Recipient { role: string; id: string | null; plant?: string; why: string; how: 'task'; due_days: number }
 export interface Recommendation { internal: Recipient[]; external: { recipient: string; document_type: string; how: 'email_draft' } | null; sequence: 'internal_first' | 'external_first' | 'internal_only'; rationale: string }
-export interface RegisterRow { id: number; case: string; order_no: number | null; order_position: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null; action_type: string | null; status: string; draft_id: number | null; recommendation: Recommendation | null }
+export interface RegisterRow { id: number; case: string; order_no: number | null; order_position: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null; action_type: string | null; status: string; draft_id: number | null; recommendation: Recommendation | null; detail: Record<string, unknown> | null }
 export interface TaskRow { id: number; register_id: number | null; case_key: string; role: string; recipient_id: string | null; why: string; due_date: string; status: 'open' | 'done'; created_at: string }
 export interface EventRow { id: number; created_at: string; case_key: string | null; register_id: number | null; event_type: string; message: string }
-export interface OrderLine { order_no: number; order_position: number; order_date: string; supplier_no: number; supplier_name: string; article_no: number; description: string; plant: string; quantity: number; unit_price: number; spend: number; contract_no: string | null; buyer_no: string }
-export interface TrendRow { run_id: number; month: string; rows: number; total: number }
+export interface OrderLine { order_no: number; order_position: number; order_date: string; supplier_no: number; supplier_name: string; article_no: number; description: string; plant: string; quantity: number; unit_price: number; spend: number; contract_no: string | null; buyer_no: string; payment_terms_p1: number | null; payment_terms_t3: number | null }
 export interface DedupRow { period_start: string; period_end: string; gross: number; dedup: number }
 export type Stats = Record<string, unknown>
 
@@ -122,10 +121,27 @@ export async function getRegisterTotals(period: Period, agents: string[], role: 
   return { rows: toNumber(r?.rows), total: toNumber(r?.total) }
 }
 
-export async function getTrend(runId: number): Promise<TrendRow[]> {
-  const { data, error } = await supabase.from('v_agent_trend').select('*').eq('run_id', runId).order('month')
+export interface ContractRow { contract_no: string; supplier_no: number; supplier_name: string; article_no: number; description: string; contract_price: number; paid: number; lines: number; volume: number; gap: number }
+export interface BridgeRow { gross: number; financing: number; net: number; suppliers: number }
+export interface IndexRow { year: number; articles_index: number; path_index: number; index_rate: number }
+
+// Chart data per agent page, read from views over the run's own findings.
+export async function getContractTable(runId: number): Promise<ContractRow[]> {
+  const { data, error } = await supabase.from('v_contract_guard_contracts').select('*').eq('run_id', runId).order('gap', { ascending: false })
   fail(error)
-  return (data ?? []).map((r) => num(r as TrendRow, ['rows', 'total']))
+  return (data ?? []).map((r) => num(r as ContractRow, ['contract_price', 'paid', 'lines', 'volume', 'gap']))
+}
+
+export async function getTermsBridge(runId: number): Promise<BridgeRow | null> {
+  const { data, error } = await supabase.from('v_terms_floor_bridge').select('gross,financing,net,suppliers').eq('run_id', runId).maybeSingle()
+  fail(error)
+  return data ? num(data as BridgeRow, ['gross', 'financing', 'net', 'suppliers']) : null
+}
+
+export async function getPriceIndex(runId: number): Promise<IndexRow[]> {
+  const { data, error } = await supabase.from('v_price_radar_index').select('year,articles_index,path_index,index_rate').eq('run_id', runId).order('year')
+  fail(error)
+  return (data ?? []).map((r) => num(r as IndexRow, ['articles_index', 'path_index', 'index_rate']))
 }
 
 export async function getDedup(period: Period): Promise<DedupRow | null> {
@@ -134,8 +150,14 @@ export async function getDedup(period: Period): Promise<DedupRow | null> {
   return data ? num(data as DedupRow, ['gross', 'dedup']) : null
 }
 
-export async function getOrderLines(supplierNo: number, articleNo: number, period: Period): Promise<OrderLine[]> {
-  const { data, error } = await supabase.from('v_order_lines').select('order_no,order_position,order_date,supplier_no,supplier_name,article_no,description,plant,quantity,unit_price,spend,contract_no,buyer_no').eq('supplier_no', supplierNo).eq('article_no', articleNo).gte('order_date', period.from).lte('order_date', period.to).order('order_date')
+export const EVIDENCE_LIMIT = 200
+
+// Order lines behind a finding in the period: by supplier and article, by article only (all suppliers), or by supplier only.
+export async function getOrderLines(supplierNo: number | null, articleNo: number | null, period: Period): Promise<OrderLine[]> {
+  let q = supabase.from('v_order_lines').select('order_no,order_position,order_date,supplier_no,supplier_name,article_no,description,plant,quantity,unit_price,spend,contract_no,buyer_no,payment_terms_p1,payment_terms_t3').gte('order_date', period.from).lte('order_date', period.to)
+  if (supplierNo != null) q = q.eq('supplier_no', supplierNo)
+  if (articleNo != null) q = q.eq('article_no', articleNo)
+  const { data, error } = await q.order('order_date').order('order_no').limit(EVIDENCE_LIMIT)
   fail(error)
   return (data ?? []).map((r) => num(r as OrderLine, ['quantity', 'unit_price', 'spend']))
 }

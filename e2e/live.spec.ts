@@ -42,23 +42,15 @@ test('L11 findings of a fresh run arrive through the live subscription without a
   expect(await page.evaluate(() => (window as unknown as { __alive?: number }).__alive)).toBe(1)
 })
 
-test('L12 trend chart shows twelve months and the run total', async ({ page }) => {
-  await page.goto('/agents/contract_guard?from=2026-01-01&to=2026-12-31')
-  const chart = page.getByTestId('trend-chart')
-  await expect(chart.getByTestId('trend-total')).toContainText('€675,529')
-  for (const m of ['Jan 26', 'Jun 26', 'Dec 26']) await expect(chart).toContainText(m)
-  await expect(chart.locator('.recharts-xAxis .recharts-cartesian-axis-tick')).toHaveCount(12)
-})
-
 test('L13 dashboard order and fold-out explanation', async ({ page }) => {
   await page.goto('/agents/contract_guard?from=2026-01-01&to=2026-12-31')
   await expect(page.getByTestId('how-panel')).toHaveCount(0)
   await expect(page.getByTestId('run-agent')).toBeVisible()
   await expect(page.getByTestId('kpi-gap')).toContainText('€675,529')
-  await expect(page.getByTestId('trend-chart')).toBeVisible()
+  await expect(page.getByTestId('contract-table')).toBeVisible()   // one chart per page since spec mvp-recommendations R16; L12's trend chart is gone
   await page.getByRole('button', { name: 'How this agent works' }).click()
   await expect(page.getByTestId('how-panel')).toContainText('Attach the agreement')
   await expect(page.getByTestId('register-contract_guard-0')).toBeVisible({ timeout: 20_000 })   // the register loads last; measure only once it is there
-  const order = await page.evaluate(() => ['run-agent', 'kpi-gap', 'trend-chart', 'register-contract_guard-0'].map((id) => document.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect().top ?? -1))
+  const order = await page.evaluate(() => ['run-agent', 'kpi-gap', 'agent-chart', 'register-contract_guard-0'].map((id) => document.querySelector(`[data-testid="${id}"]`)?.getBoundingClientRect().top ?? -1))
   expect(order).toEqual([...order].sort((a, b) => a - b))
 })
