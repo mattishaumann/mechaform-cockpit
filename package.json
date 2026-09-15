@@ -12,7 +12,9 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "check-ui": "sh scripts/check-ui.sh",
-    "check": "npm run typecheck && npm run test && npm run check-ui && npm run e2e"
+    "check": "npm run typecheck && npm run test && npm run check-ui && npm run e2e && npm run e2e:c11 && npm run e2e:c13",
+    "e2e:c11": "VITE_ENABLED_AGENTS=contract_guard,tier_guard,terms_floor playwright test e2e/enabled.spec.ts",
+    "e2e:c13": "VITE_RUN_INTERVAL_MS=1500 playwright test e2e/lastrun.spec.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
