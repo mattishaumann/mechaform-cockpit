@@ -34,6 +34,17 @@ Each agent is a Postgres function in the Supabase project (`run_contract_guard`,
 
 `supabase/sql/verify_runs.sql` (in the dataset folder) runs all five agents over 2026 and prints rows and totals per run. They must match the analysis notebook to the euro: Contract Guard 675,529; Tier Guard 254,503 and 600,692; Terms Floor 1,017,963; Price Radar 3,341,179; Preferred Steering 1,639,801. The Q1 2026 block checks period semantics (Contract Guard 9 rows, 173,134; Tier Guard 95 rows, 64,371).
 
+## Who acts
+
+Every finding carries a `recommendation` (jsonb on `mvp_register`), filled in SQL when a run closes (`supabase/sql/reco_recommend.sql` in the dataset folder): the internal recipients with the reason and a due date, the external message when there is one, the order (internal first, external first, internal only) and one rationale sentence built from the finding's own numbers with a fixed template. No model is involved. The identities come from the data as far as it goes:
+
+- **Einkäufer**: `order_headers.buyer_no` of the order (five buyers: 3400, 4471, 8190, 9215, A124). There is no buyer master table and no name anywhere in the export, so the app shows "Einkäufer {buyer_no}".
+- **Plant**: `order_items.plant` carries code and name (01_01 Augsburg, 01_02 Chemnitz, 01_03 Hamburg); it is shown next to the buyer where the rule is plant-specific.
+- **Kategorieeinkauf**: the category buyer is represented by the purchasing organisation (`purchasing_organization_no`, 0010, 0020, 0030) with the most volume or spend on the pair or article; every buyer orders in all three, so there is no person to name.
+- **Finanzen** and **Qualität**: roles, not people. The export has no finance or quality contact; the card labels them "Rolle, keine Person".
+
+"Aufgabe anlegen" writes a row to `mvp_tasks` through `create_task` (idempotent per finding and recipient) and moves the finding to "in Bearbeitung"; nothing is sent. Thresholds and due days live in `mvp_config`.
+
 ## Checks
 
 `npm run check` runs typecheck, unit tests, the UI gate (`scripts/check-ui.sh`) and the Playwright suite against the live project, including the three-agent and five-agent configuration runs and the empty-state and error-state runs. The live tests trigger real agent runs on the project.
