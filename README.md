@@ -22,11 +22,11 @@ Environment variables:
 
 ## Run model
 
-Each agent is a Postgres function in the Supabase project (`run_contract_guard`, `run_tier_guard` plus its annual layer, `run_terms_floor`, `run_price_radar`, `run_preferred_steering`), reached through one entry point `run_agent(agent, period_start, period_end)`. A run replaces that agent's rows in `mvp_register` for the period, records itself in `agent_runs`, and stores its gap-by-month trend in `agent_trend`. The functions are security definer; the anon role can call `run_agent` and read, but cannot write tables directly. The browser subscribes to `mvp_register` and `agent_runs` through Supabase Realtime, so findings and run status appear without a reload. The period comes from the URL (`?from=&to=`), default calendar 2026, with year, quarter and month presets and a custom range. Nothing is computed in the browser.
+Each agent is a Postgres function in the Supabase project (`run_contract_guard`, `run_tier_guard` plus its annual layer, `run_terms_floor`, `run_price_radar`, `run_preferred_steering`), reached through one entry point `run_agent(agent, period_start, period_end)`. A run upserts its findings into `mvp_register` on a natural key (case, order and position for line-level findings; case, supplier and article for pair-level ones; always with the period), prunes the findings of that case and period it no longer produces, records itself in `agent_runs`, and stores its gap-by-month trend in `agent_trend`. Register ids, statuses, drafts and tasks therefore survive reruns. The functions are security definer; the anon role can call `run_agent` and read, but cannot write tables directly. The browser subscribes to `mvp_register` and `agent_runs` through Supabase Realtime, so findings and run status appear without a reload. The period comes from the URL (`?from=&to=`), default calendar 2026, with year, quarter and month presets and a custom range. Nothing is computed in the browser.
 
 ## Adding an agent
 
-1. Write `run_<agent>(p_start date, p_end date)` in `supabase/sql/live_functions.sql` following the existing ones (open a run, insert findings with `run_id`, close the run) and add its branch to `run_agent`.
+1. Write `run_<agent>(p_start date, p_end date)` in `supabase/sql/reco_harness.sql` following the existing ones (open a run, upsert findings with `run_id` on the finding key, close the run) and add its branch to `run_agent`.
 2. Add its row to `mvp_cases` (name, rule, trigger, evidence, calculation, action, confidence) and its entry in `src/lib/agents.ts` (module, register layers, optional extras).
 3. Add the case key to `VITE_ENABLED_AGENTS`.
 
@@ -66,5 +66,5 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env.local
 
 The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three brief cases once against the API; `npm run llm:precompute` drafts the three highest-gap findings per case and prints the spend, stopping above 1 USD. In the app, "Aktion entwerfen" on a finding shows the draft next to its evidence; "Als gesendet markieren (Simulation)" only changes the status and never sends anything.
 
-Drafts survive agent re-runs. A run replaces the register rows of its period, so `mvp_drafts` carries the finding's natural key (case, supplier, article, order, volume, baseline, period) and `close_run` re-links every stored draft to the new row and restores statuses other than open (`supabase/sql/active_carry.sql` in the dataset folder). "Run all agents" therefore never discards the precomputed drafts.
+Drafts survive agent re-runs because a rerun keeps each finding's id (`supabase/sql/reco_harness.sql` in the dataset folder replaced the earlier carry-over in `active_carry.sql`). "Run all agents" therefore never discards the precomputed drafts.
 
