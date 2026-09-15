@@ -1,0 +1,1 @@
+Reference: Tacto product screens (tacto.ai) as described in the vault note cases/tacto/wiki/tacto-ci-and-product-patterns.md: one orange accent on off-white cards, near-black buttons, monospace uppercase labels, status pills with dots, step charts.
