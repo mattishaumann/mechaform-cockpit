@@ -152,6 +152,21 @@ export const copy = {
     taskError: 'Aufgabe wurde nicht angelegt:',
     column: 'Empfehlung',
   },
+  // Scenario card (spec mvp-agent-scenarios): Tacto's "Vorgeschlagene Szenarien", German like the recommendation card.
+  scenarios: {
+    title: 'Vorgeschlagene Szenarien',
+    how: { draft: 'ENTWURF', task: 'AUFGABE', negotiation: 'VERHANDLUNG', idea: 'IDEE' } as Record<string, string>,
+    sample: 'BEISPIELINDEX',
+    createDraft: 'Entwurf erstellen',
+    createTask: 'Aufgabe anlegen',
+    negotiate: 'Verhandlungsvorbereitung beginnen',
+    taskCreated: 'Aufgabe angelegt',
+    ideaNote: 'Idee, noch ohne Aktion im Prototyp',
+    noDraft: 'Für diese Feststellung ist kein Lieferantenentwurf vorgesehen.',
+    empty: 'Der Agent hat für diese Feststellung keine Szenarien. Den Agenten erneut ausführen, um sie zu erzeugen.',
+    error: 'Szenarien konnten nicht geladen werden.',
+    taskError: 'Aufgabe wurde nicht angelegt:',
+  },
   finding: { markSent: 'Als gesendet markieren (Simulation)', dismiss: 'Verwerfen', reopen: 'Wieder öffnen', linesChecked: 'lines checked', flagged: 'flagged' },
   draft: {
     open: 'Aktion entwerfen',

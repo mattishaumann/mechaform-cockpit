@@ -10,6 +10,7 @@ import { FindingActions } from './FindingActions'
 import { DraftPanel } from './DraftPanel'
 import { Pill } from './Pill'
 import { RecommendationCard } from './RecommendationCard'
+import { ScenarioCard } from './ScenarioCard'
 import { ErrorState, Skeleton } from './States'
 
 // Which order lines prove a finding: the pair for line-level cases, every supplier of the article for article-level cases,
@@ -27,6 +28,7 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
   const contractNo = typeof detail.contract_no === 'string' ? detail.contract_no : null
   const best = toNumber(detail.best_rate)
   const [draftOpen, setDraftOpen] = useState(false)
+  const [recoKey, setRecoKey] = useState(0)   // a task created from a scenario remounts the Empfehlung card so it shows the task
   const draftRef = useRef<HTMLDivElement>(null)
   useEffect(() => { setDraftOpen(false) }, [row.id])
   useEffect(() => { if (draftOpen) draftRef.current?.scrollIntoView({ block: 'start' }) }, [draftOpen])
@@ -51,7 +53,8 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
       </div>
       <div className="border-b border-border px-6 py-3"><FindingActions row={row} onChanged={onStatus} /></div>
       <div className="overflow-auto px-6 py-4">
-        <RecommendationCard row={row} onStatus={onStatus} draftOpen={draftOpen} onDraft={() => setDraftOpen(true)} />
+        <ScenarioCard key={row.id} row={row} onStatus={onStatus} onDraft={() => setDraftOpen(true)} onTaskCreated={() => setRecoKey((k) => k + 1)} />
+        <div className="mt-6"><RecommendationCard key={`${row.id}-${recoKey}`} row={row} onStatus={onStatus} draftOpen={draftOpen} onDraft={() => setDraftOpen(true)} /></div>
         <h3 className="mt-6 font-mono text-xs uppercase tracking-widest text-text-muted">{copy.draft.evidence}</h3>
         {q.error && <ErrorState text={copy.cockpit.error} detail={q.error} />}
         {q.loading && <Skeleton lines={6} />}
