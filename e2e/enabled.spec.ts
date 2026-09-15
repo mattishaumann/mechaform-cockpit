@@ -7,7 +7,7 @@ test('C11 enabling a third agent by configuration adds its card and raises the h
   const tf = page.getByTestId('agent-card-terms_floor')
   await expect(tf).toContainText('Terms Floor')
   await expect(tf).toContainText('€1,017,963')
-  await expect(page.getByTestId('headline')).toContainText('€2,548,687')
+  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(3)   // the headline is R13 in spec mvp-recommendations
 })
 
 test('L14 five agents by configuration show the gross sum and the deduplicated total', async ({ page }) => {
@@ -15,6 +15,5 @@ test('L14 five agents by configuration show the gross sum and the deduplicated t
   await page.goto('/')
   await expect(page.getByTestId('agent-card-preferred_steering')).toBeVisible()
   await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(5)
-  await expect(page.getByTestId('dedup')).toContainText('€5,316,564')
-  await expect(page.getByTestId('dedup')).toContainText('€7,529,667')
+  await expect(page.getByTestId('gross')).toContainText('€7,529,667')   // the row-level dedup line was replaced by R13 in spec mvp-recommendations
 })

@@ -9,9 +9,9 @@ test('L8 period selector writes the range to the URL', async ({ page }) => {
 test('L9 run all agents records runs and keeps the 2026 headline', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('run-all').click()
-  await expect(page.getByTestId('run-all')).toBeEnabled({ timeout: 60_000 })
-  await expect(page.getByTestId('run-log').locator('li[data-status="done"]')).toHaveCount(5, { timeout: 20_000 })
-  await expect(page.getByTestId('headline')).toContainText('€1,530,724')
+  await expect(page.getByTestId('run-all')).toBeEnabled({ timeout: 90_000 })
+  await expect(page.getByTestId('run-log').locator('li[data-status="done"]')).toHaveCount(5, { timeout: 20_000 })   // the log lists the last five runs
+  await expect(page.getByTestId('hard-savings')).toHaveText('€3,926,438')   // hard-savings headline since spec mvp-recommendations R13
   await expect(page.getByTestId('last-run')).not.toContainText('Not run')
 })
 

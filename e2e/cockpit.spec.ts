@@ -12,9 +12,8 @@ test('C9 agent cards show value, rows and confidence from mvp_cases', async ({ p
   await expect(tg).toContainText('Confidence 0.75')
 })
 
-test('C10 headline sums the enabled agents and exposures stay apart', async ({ page }) => {
+test('C10 exposures stay apart (the headline itself is R13 in spec mvp-recommendations)', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByTestId('headline')).toContainText('€1,530,724')
   const kept = page.getByTestId('kept-apart')
   await expect(kept).toContainText('Kept apart, not savings')
   await expect(kept).toContainText('€58,477,838')

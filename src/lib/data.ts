@@ -2,7 +2,9 @@ import { supabase } from './supabase'
 import { toNumber } from './format'
 import type { Period } from './period'
 
-export interface CaseRow { case_key: string; name: string; trigger: string; rule: string; inputs: string[]; evidence_required: string; customer_action: string; example: Record<string, unknown>; calculation: string; value_2026: number; rows: number; confidence: number }
+export interface CaseRow { case_key: string; name: string; trigger: string; rule: string; inputs: string[]; evidence_required: string; customer_action: string; example: Record<string, unknown>; calculation: string; value_2026: number; rows: number; confidence: number; action_type: string | null; summary: string | null; enabled: boolean }
+export interface SavingsSplit { hard: number; cost_avoidance: number; gross: number; hard_contract_guard: number; hard_tier_guard: number; hard_preferred_steering: number; hard_terms_floor: number }
+export interface ConfigRow { key: string; value: number; unit: string; label: string; case_key: string | null; note: string | null }
 export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number; lines_checked: number | null }
 export interface Recipient { role: string; id: string | null; plant?: string; why: string; how: 'task'; due_days: number }
 export interface Recommendation { internal: Recipient[]; external: { recipient: string; document_type: string; how: 'email_draft' } | null; sequence: 'internal_first' | 'external_first' | 'internal_only'; rationale: string }
@@ -21,6 +23,30 @@ export async function getCases(): Promise<CaseRow[]> {
   const { data, error } = await supabase.from('mvp_cases').select('*').order('case_key')
   fail(error)
   return (data ?? []).map((r) => num(r as CaseRow, ['value_2026', 'rows', 'confidence']))
+}
+
+export async function setAgentEnabled(caseKey: string, enabled: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_agent_enabled', { p_case_key: caseKey, p_enabled: enabled })
+  fail(error)
+}
+
+// Hard savings (one primary case per article plus terms), cost avoidance (Price Radar) and the gross sum, from the database.
+export async function getSavingsSplit(period: Period): Promise<SavingsSplit | null> {
+  const { data, error } = await supabase.from('v_savings_split').select('*').eq('period_start', period.from).eq('period_end', period.to).maybeSingle()
+  fail(error)
+  return data ? num(data as SavingsSplit, ['hard', 'cost_avoidance', 'gross', 'hard_contract_guard', 'hard_tier_guard', 'hard_preferred_steering', 'hard_terms_floor']) : null
+}
+
+export async function getOpenTasks(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.from('v_open_tasks').select('case_key,open')
+  fail(error)
+  return Object.fromEntries((data ?? []).map((r) => [r.case_key, toNumber(r.open)]))
+}
+
+export async function getConfig(): Promise<ConfigRow[]> {
+  const { data, error } = await supabase.from('mvp_config').select('*').order('key')
+  fail(error)
+  return (data ?? []).map((r) => num(r as ConfigRow, ['value']))
 }
 
 export async function getStats(): Promise<Stats> {
