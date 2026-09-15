@@ -28,8 +28,8 @@ function Paragraph({ text, animate, onHover }: { text: string; animate: boolean;
   const [value, setValue] = useState(text)
   useEffect(() => setValue(text), [text])
   return (
-    <textarea aria-label="Absatz" value={animate && shown.length < text.length ? shown : value} onChange={(e) => setValue(e.target.value)} onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)} onFocus={() => onHover(true)} onBlur={() => onHover(false)} rows={Math.max(2, Math.ceil(text.length / 90))}
-      className="w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-sm leading-relaxed text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg hover:border-border-strong" />
+    <textarea aria-label="Absatz" value={animate && shown.length < text.length ? shown : value} onChange={(e) => setValue(e.target.value)} onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)} onFocus={() => onHover(true)} onBlur={() => onHover(false)} rows={Math.max(2, Math.ceil(text.length / 55))}
+      className="field-sizing-content w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-sm leading-relaxed text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg hover:border-border-strong" />
   )
 }
 
