@@ -39,6 +39,11 @@ export function Cockpit() {
         <div data-testid="headline" className="rounded-lg border border-border bg-surface p-6 md:col-span-2">
           <p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.cockpit.headlineLabel}</p>
           <p data-tabular className="mt-2 text-5xl font-semibold tracking-tight text-brand">{formatEur(headline)}</p>
+          <ul className="mt-4 space-y-1 text-sm text-text-muted">
+            {q.data.totals.filter((t) => layerNames.includes(t.case)).sort((a, b) => b.total - a.total).map((t) => (
+              <li key={t.case} className="flex justify-between gap-4"><span>{t.case}</span><span data-tabular className="text-text">{formatEur(t.total)}</span></li>
+            ))}
+          </ul>
         </div>
         <div data-testid="kept-apart" className="rounded-lg border border-border bg-surface p-6">
           <p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.cockpit.keptApart}</p>
