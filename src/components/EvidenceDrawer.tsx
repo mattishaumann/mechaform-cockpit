@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import type { Period } from '../lib/period'
 import type { OrderLine, RegisterRow } from '../lib/data'
 import { getOrderLines } from '../lib/data'
 import { formatEur, formatInt, formatPrice } from '../lib/format'
@@ -8,8 +9,8 @@ import { Button } from './Button'
 import { Pill } from './Pill'
 import { ErrorState, Skeleton } from './States'
 
-export function EvidenceDrawer({ row, onClose }: { row: RegisterRow; onClose: () => void }) {
-  const q = useQuery<OrderLine[]>(() => getOrderLines(row.supplier_no ?? 0, row.article_no ?? 0), [row.id])
+export function EvidenceDrawer({ row, period, onClose }: { row: RegisterRow; period: Period; onClose: () => void }) {
+  const q = useQuery<OrderLine[]>(() => getOrderLines(row.supplier_no ?? 0, row.article_no ?? 0, period), [row.id, period.from, period.to])
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
   const lines = q.data ?? []
   return (
@@ -17,7 +18,7 @@ export function EvidenceDrawer({ row, onClose }: { row: RegisterRow; onClose: ()
       className="fixed inset-y-0 right-0 z-10 flex w-full max-w-2xl flex-col border-l border-border bg-surface shadow-lg motion-safe:animate-[drawer_200ms_var(--ease-out-quart)]">
       <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
         <div>
-          <p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.evidenceDrawer}</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.evidenceDrawer.replace('2026', `${period.from} to ${period.to}`)}</p>
           <h2 className="mt-1 text-lg font-semibold">{lines[0]?.description ?? ''} {row.article_no}, {lines[0]?.supplier_name ?? row.supplier_no}</h2>
         </div>
         <Button onClick={onClose} aria-label={copy.agent.close}>{copy.agent.close}</Button>

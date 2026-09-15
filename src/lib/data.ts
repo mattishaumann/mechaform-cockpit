@@ -1,37 +1,22 @@
 import { supabase } from './supabase'
 import { toNumber } from './format'
+import type { Period } from './period'
 
-export interface CaseRow {
-  case_key: string
-  name: string
-  trigger: string
-  rule: string
-  inputs: string[]
-  evidence_required: string
-  customer_action: string
-  example: Record<string, unknown>
-  calculation: string
-  value_2026: number
-  rows: number
-  confidence: number
-}
-export interface CaseTotal { case: string; rows: number; total: number }
-export interface RegisterRow { id: number; case: string; order_no: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number }
+export interface CaseRow { case_key: string; name: string; trigger: string; rule: string; inputs: string[]; evidence_required: string; customer_action: string; example: Record<string, unknown>; calculation: string; value_2026: number; rows: number; confidence: number }
+export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number }
+export interface RegisterRow { id: number; case: string; order_no: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null }
 export interface OrderLine { order_no: number; order_position: number; order_date: string; supplier_no: number; supplier_name: string; article_no: number; description: string; plant: string; quantity: number; unit_price: number; spend: number; contract_no: string | null; buyer_no: string }
+export interface TrendRow { run_id: number; month: string; rows: number; total: number }
+export interface DedupRow { period_start: string; period_end: string; gross: number; dedup: number }
 export type Stats = Record<string, unknown>
 
 const fail = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
+const num = <T extends object>(r: T, keys: (keyof T)[]): T => { const o = { ...r }; for (const k of keys) (o as Record<string, unknown>)[k as string] = toNumber(o[k]); return o }
 
 export async function getCases(): Promise<CaseRow[]> {
   const { data, error } = await supabase.from('mvp_cases').select('*').order('case_key')
   fail(error)
-  return (data ?? []).map((r) => ({ ...r, value_2026: toNumber(r.value_2026), rows: toNumber(r.rows), confidence: toNumber(r.confidence) })) as CaseRow[]
-}
-
-export async function getCaseTotals(): Promise<CaseTotal[]> {
-  const { data, error } = await supabase.from('v_case_totals').select('*')
-  fail(error)
-  return (data ?? []).map((r) => ({ case: r.case, rows: toNumber(r.rows), total: toNumber(r.total) }))
+  return (data ?? []).map((r) => num(r as CaseRow, ['value_2026', 'rows', 'confidence']))
 }
 
 export async function getStats(): Promise<Stats> {
@@ -40,16 +25,55 @@ export async function getStats(): Promise<Stats> {
   return Object.fromEntries((data ?? []).map((r) => [r.key, r.value]))
 }
 
-export async function getRegister(caseName: string, page: number, pageSize: number): Promise<{ rows: RegisterRow[]; count: number }> {
-  const from = page * pageSize
-  const { data, error, count } = await supabase.from('mvp_register').select('*', { count: 'exact' }).eq('case', caseName).order('gap_eur', { ascending: false }).order('id').range(from, from + pageSize - 1)
+export async function getLatestRuns(period: Period): Promise<RunRow[]> {
+  const { data, error } = await supabase.from('v_latest_runs').select('*').eq('period_start', period.from).eq('period_end', period.to)
   fail(error)
-  const rows = (data ?? []).map((r) => ({ ...r, volume: toNumber(r.volume), baseline: toNumber(r.baseline), target: toNumber(r.target), gap_eur: toNumber(r.gap_eur) })) as RegisterRow[]
+  return (data ?? []).map((r) => num(r as RunRow, ['rows', 'total']))
+}
+
+export async function getRunLog(limit = 5): Promise<RunRow[]> {
+  const { data, error } = await supabase.from('agent_runs').select('*').order('id', { ascending: false }).limit(limit)
+  fail(error)
+  return (data ?? []).map((r) => num(r as RunRow, ['rows', 'total']))
+}
+
+export async function runAgent(agent: string, period: Period): Promise<number> {
+  const { data, error } = await supabase.rpc('run_agent', { p_agent: agent, p_start: period.from, p_end: period.to })
+  fail(error)
+  return toNumber(data)
+}
+
+export async function getRegister(runId: number, page: number, pageSize: number): Promise<{ rows: RegisterRow[]; count: number }> {
+  const from = page * pageSize
+  const { data, error, count } = await supabase.from('mvp_register').select('*', { count: 'exact' }).eq('run_id', runId).order('gap_eur', { ascending: false }).order('id').range(from, from + pageSize - 1)
+  fail(error)
+  const rows = (data ?? []).map((r) => num(r as RegisterRow, ['volume', 'baseline', 'target', 'gap_eur']))
   return { rows, count: count ?? rows.length }
 }
 
-export async function getOrderLines(supplierNo: number, articleNo: number, year = 2026): Promise<OrderLine[]> {
-  const { data, error } = await supabase.from('v_order_lines').select('order_no,order_position,order_date,supplier_no,supplier_name,article_no,description,plant,quantity,unit_price,spend,contract_no,buyer_no').eq('supplier_no', supplierNo).eq('article_no', articleNo).eq('year', year).order('order_date')
+export async function getTrend(runId: number): Promise<TrendRow[]> {
+  const { data, error } = await supabase.from('v_agent_trend').select('*').eq('run_id', runId).order('month')
   fail(error)
-  return (data ?? []).map((r) => ({ ...r, quantity: toNumber(r.quantity), unit_price: toNumber(r.unit_price), spend: toNumber(r.spend) })) as OrderLine[]
+  return (data ?? []).map((r) => num(r as TrendRow, ['rows', 'total']))
+}
+
+export async function getDedup(period: Period): Promise<DedupRow | null> {
+  const { data, error } = await supabase.from('v_dedup_total').select('*').eq('period_start', period.from).eq('period_end', period.to).maybeSingle()
+  fail(error)
+  return data ? num(data as DedupRow, ['gross', 'dedup']) : null
+}
+
+export async function getOrderLines(supplierNo: number, articleNo: number, period: Period): Promise<OrderLine[]> {
+  const { data, error } = await supabase.from('v_order_lines').select('order_no,order_position,order_date,supplier_no,supplier_name,article_no,description,plant,quantity,unit_price,spend,contract_no,buyer_no').eq('supplier_no', supplierNo).eq('article_no', articleNo).gte('order_date', period.from).lte('order_date', period.to).order('order_date')
+  fail(error)
+  return (data ?? []).map((r) => num(r as OrderLine, ['quantity', 'unit_price', 'spend']))
+}
+
+// Realtime: findings arriving in the register and runs closing. Returns the unsubscribe function.
+export function subscribe(onRegister: (row: RegisterRow) => void, onRun: (row: RunRow) => void): () => void {
+  const channel = supabase.channel('live')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mvp_register' }, (p) => onRegister(num(p.new as RegisterRow, ['volume', 'baseline', 'target', 'gap_eur'])))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_runs' }, (p) => onRun(num(p.new as RunRow, ['rows', 'total'])))
+    .subscribe()
+  return () => { supabase.removeChannel(channel) }
 }

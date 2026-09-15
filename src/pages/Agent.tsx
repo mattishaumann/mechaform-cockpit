@@ -1,72 +1,98 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { Button } from '../components/Button'
 import { EvidenceDrawer } from '../components/EvidenceDrawer'
+import { HowPanel } from '../components/HowPanel'
 import { Pill } from '../components/Pill'
 import { columns, RegisterTable, type Column } from '../components/RegisterTable'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
+import { TierYearChart, type TierYear } from '../components/TierYearChart'
+import { TrendChart } from '../components/TrendChart'
 import { copy } from '../copy'
 import { AGENTS, type CaseKey } from '../lib/agents'
-import { getCases, getCaseTotals, getRegister, getStats, type RegisterRow } from '../lib/data'
-import { TierYearChart, type TierYear } from '../components/TierYearChart'
-import { formatConfidence, formatEur } from '../lib/format'
+import { getCases, getLatestRuns, getRegister, getStats, getTrend, runAgent, subscribe, type RegisterRow, type RunRow } from '../lib/data'
+import { formatConfidence, formatEur, formatInt } from '../lib/format'
 import { getNames } from '../lib/names'
+import { periodLabel, usePeriod } from '../lib/period'
 import { useQuery } from '../lib/useQuery'
 
 const PAGE = 50
 const layerColumns: Record<string, Column[]> = {
-  'Contract Guard': [columns.order, columns.article, columns.supplier, columns.quantity, columns.paid, columns.contractPrice, columns.gap],
-  'Tier Guard': [columns.order, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap],
+  'Contract Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.contractPrice, columns.gap],
+  'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap],
   'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap],
+  'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap],
+  'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap],
+  'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap],
 }
 
-function Layer({ caseName, label, testId, onRow, selectedId }: { caseName: string; label?: string; testId: string; onRow?: (r: RegisterRow) => void; selectedId?: number }) {
+function Findings({ run, label, testId, onRow, selectedId, live }: { run: RunRow; label?: string; testId: string; onRow?: (r: RegisterRow) => void; selectedId?: number; live: number }) {
   const [page, setPage] = useState(0)
   const q = useQuery(async () => {
-    const [{ rows, count }, totals] = await Promise.all([getRegister(caseName, page, PAGE), getCaseTotals()])
+    const { rows, count } = await getRegister(run.id, page, PAGE)
     const names = await getNames([...new Set(rows.map((r) => r.supplier_no).filter((x): x is number => x != null))], [...new Set(rows.map((r) => r.article_no).filter((x): x is number => x != null))])
-    return { rows, count, names, total: totals.find((t) => t.case === caseName)?.total ?? 0 }
-  }, [caseName, page])
+    return { rows, count, names }
+  }, [run.id, page, live])
   if (q.error) return <ErrorState text={copy.cockpit.error} detail={q.error} />
-  if (q.loading || !q.data) return <Skeleton lines={8} />
-  if (q.data.count === 0) return <EmptyState text={`No flagged rows for ${caseName}.`} />
+  if (!q.data) return <Skeleton lines={8} />
+  if (q.data.count === 0) return <EmptyState text={`No findings for ${run.case_name} in this period.`} />
   return (
-    <section className="mt-8">
+    <section className="mt-6">
       {label && <h2 className="mb-3 text-lg font-semibold">{label}</h2>}
-      <RegisterTable rows={q.data.rows} cols={layerColumns[caseName] ?? [columns.article, columns.supplier, columns.volume, columns.baseline, columns.gap]} names={q.data.names}
-        total={q.data.total} count={q.data.count} page={page} pageSize={PAGE} onPage={setPage} onRow={onRow} selectedId={selectedId} testId={testId} />
+      <RegisterTable rows={q.data.rows} cols={layerColumns[run.case_name] ?? [columns.article, columns.supplier, columns.volume, columns.baseline, columns.gap]} names={q.data.names}
+        total={run.total} count={q.data.count} page={page} pageSize={PAGE} onPage={setPage} onRow={onRow} selectedId={selectedId} testId={testId} runId={run.id} />
     </section>
   )
 }
 
 export function Agent() {
   const { key } = useParams<{ key: CaseKey }>()
-  const cases = useQuery(getCases, [])
-  const stats = useQuery(getStats, [])
+  const { period } = usePeriod()
+  const [tick, setTick] = useState(0)
+  const [live, setLive] = useState(0)
+  const [running, setRunning] = useState(false)
   const [selected, setSelected] = useState<RegisterRow | null>(null)
-  const row = cases.data?.find((c) => c.case_key === key)
-  if (cases.error) return <ErrorState text={copy.cockpit.error} detail={cases.error} />
-  if (cases.loading) return <Skeleton lines={5} />
-  if (!row || !key || !(key in AGENTS)) return <EmptyState text={`No agent named ${key}.`} />
-  const config = AGENTS[key]
-  const layers = config.layers ?? [{ key: row.name, label: undefined as string | undefined }]
+  const refresh = useCallback(() => setTick((t) => t + 1), [])
+  const q = useQuery(async () => {
+    const [cases, runs, stats] = await Promise.all([getCases(), getLatestRuns(period), getStats()])
+    const row = cases.find((c) => c.case_key === key)
+    const config = key && key in AGENTS ? AGENTS[key] : undefined
+    const layers = config?.layers ?? (row ? [{ key: row.name, label: '' }] : [])
+    const layerRuns = layers.map((l) => runs.find((r) => r.case_name === l.key)).filter((r): r is RunRow => Boolean(r))
+    const trend = layerRuns[0] ? await getTrend(layerRuns[0].id) : []
+    return { row, config, layers, layerRuns, trend, stats }
+  }, [key, period.from, period.to, tick])
+  useEffect(() => subscribe((r) => { if (q.data?.layerRuns.some((x) => x.id === r.run_id)) setLive((n) => n + 1) }, (r) => { if (r.agent === key && r.status === 'done') refresh() }), [key, refresh, q.data?.layerRuns])
+  useEffect(() => { setSelected(null) }, [period.from, period.to])
+
+  if (q.error) return <ErrorState text={copy.cockpit.error} detail={q.error} />
+  if (!q.data) return <Skeleton lines={6} />
+  const { row, config, layers, layerRuns, trend, stats } = q.data
+  if (!row || !config || !key) return <EmptyState text={`No agent named ${key}.`} />
+  const main = layerRuns[0]
+  const run = async () => { setRunning(true); try { await runAgent(key, period) } finally { setRunning(false); refresh() } }
   return (
     <section>
-      <Pill tone="brand">{config.module}</Pill>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight">{row.name}</h1>
-      <p className="mt-2 max-w-prose text-text-muted">{row.rule}</p>
-      <dl className="mt-6 grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.table.gap}</dt><dd data-tabular className="mt-1 text-3xl font-semibold tracking-tight text-brand">{formatEur(row.value_2026)}</dd></div>
-        <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.trigger}</dt><dd className="mt-1 text-sm">{row.trigger}</dd></div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Pill tone="brand">{config.module}</Pill>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight">{row.name}</h1>
+          <p className="mt-1 text-sm text-text-muted">{periodLabel(period)}</p>
+        </div>
+        <Button variant="primary" data-testid="run-agent" loading={running} onClick={run}>{copy.agent.run}</Button>
+      </div>
+      <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.table.gap}</dt><dd data-testid="kpi-gap" data-tabular className="mt-1 text-3xl font-semibold tracking-tight text-brand">{main ? formatEur(main.total) : copy.cockpit.notRun}</dd></div>
+        <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.findings}</dt><dd data-testid="kpi-rows" data-tabular className="mt-1 text-3xl font-semibold tracking-tight">{main ? formatInt(main.rows) : '0'}</dd></div>
+        <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.cockpit.lastRun}</dt><dd data-testid="kpi-last-run" className="mt-1 text-sm">{main?.finished_at ? new Date(main.finished_at).toLocaleString('en-GB') : copy.cockpit.notRun}</dd></div>
         <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">Confidence</dt><dd className="mt-1 text-sm">{copy.cockpit.confidence(formatConfidence(row.confidence))}</dd></div>
       </dl>
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border bg-surface p-4 text-sm"><p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.evidence}</p><p className="mt-1">{row.evidence_required}</p></div>
-        <div className="rounded-lg border border-border bg-surface p-4 text-sm"><p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.action}</p><p className="mt-1">{row.customer_action}</p></div>
-      </div>
-      <p className="mt-4 text-sm text-text-muted"><span className="font-mono text-xs uppercase tracking-widest">{copy.agent.workedExample}</span> {row.calculation}</p>
-      {Boolean(config.extras?.includes('tier_year_chart') && stats.data?.tier_share_by_year) && <div className="mt-6"><TierYearChart data={(stats.data?.tier_share_by_year ?? []) as TierYear[]} /></div>}
-      {layers.map((l, i) => <Layer key={l.key} caseName={l.key} label={config.layers ? l.label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} />)}
-      {selected && <EvidenceDrawer row={selected} onClose={() => setSelected(null)} />}
+      {main && trend.length > 0 && <div className="mt-6"><TrendChart rows={trend} total={main.total} /></div>}
+      {config.extras?.includes('tier_year_chart') && Boolean(stats.tier_share_by_year) && <div className="mt-6"><TierYearChart data={stats.tier_share_by_year as TierYear[]} /></div>}
+      <HowPanel row={row} />
+      {!main && <div className="mt-6"><EmptyState text={copy.agent.noRun} /></div>}
+      {layerRuns.map((r, i) => <Findings key={r.id} run={r} label={layers.length > 1 ? layers[i].label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} live={live} />)}
+      {selected && selected.supplier_no != null && selected.article_no != null && <EvidenceDrawer row={selected} period={period} onClose={() => setSelected(null)} />}
     </section>
   )
 }

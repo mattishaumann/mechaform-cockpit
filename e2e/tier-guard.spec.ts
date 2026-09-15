@@ -20,7 +20,8 @@ test('C17 year chart carries the three shares from mvp_stats', async ({ page }) 
   await expect(chart).toContainText('100%')
 })
 
-test('C18 worked example line is shown', async ({ page }) => {
+test('C18 worked example line is shown (inside the fold-out since spec mvp-live-agents L13)', async ({ page }) => {
   await page.goto('/agents/tier_guard')
-  await expect(page.locator('main')).toContainText('156 x (€233.41 - €185.74) = €7,437')
+  await page.getByRole('button', { name: 'How this agent works' }).click()
+  await expect(page.getByTestId('how-panel')).toContainText('156 x (€233.41 - €185.74) = €7,437')
 })

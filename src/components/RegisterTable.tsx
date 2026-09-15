@@ -8,6 +8,7 @@ export interface Names { suppliers: Record<number, string>; articles: Record<num
 
 export const columns = {
   order: { key: 'order', label: copy.table.order, render: (r: RegisterRow) => (r.order_no ? String(r.order_no) : '') },
+  date: { key: 'date', label: copy.table.date, render: (r: RegisterRow) => r.order_date ?? '' },
   article: { key: 'article', label: copy.table.article, render: (r: RegisterRow, n: Names) => `${n.articles[r.article_no ?? -1] ?? ''} ${r.article_no ?? ''}`.trim() },
   supplier: { key: 'supplier', label: copy.table.supplier, render: (r: RegisterRow, n: Names) => n.suppliers[r.supplier_no ?? -1] ?? String(r.supplier_no ?? '') },
   quantity: { key: 'quantity', label: copy.table.quantity, render: (r: RegisterRow) => formatInt(r.volume), align: 'right' as const },
@@ -16,15 +17,16 @@ export const columns = {
   baseline: { key: 'baseline', label: copy.table.baseline, render: (r: RegisterRow) => formatPrice(r.baseline), align: 'right' as const },
   contractPrice: { key: 'contractPrice', label: copy.table.contractPrice, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
   tierPrice: { key: 'tierPrice', label: copy.table.tierPrice, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
+  target: { key: 'target', label: copy.table.target, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
   gap: { key: 'gap', label: copy.table.gap, render: (r: RegisterRow) => formatEur(r.gap_eur), align: 'right' as const },
 } satisfies Record<string, Column>
 
-interface Props { rows: RegisterRow[]; cols: Column[]; names: Names; total: number; count: number; page: number; pageSize: number; onPage: (p: number) => void; onRow?: (r: RegisterRow) => void; selectedId?: number; testId: string }
+interface Props { rows: RegisterRow[]; cols: Column[]; names: Names; total: number; count: number; page: number; pageSize: number; onPage: (p: number) => void; onRow?: (r: RegisterRow) => void; selectedId?: number; testId: string; runId?: number }
 
-export function RegisterTable({ rows, cols, names, total, count, page, pageSize, onPage, onRow, selectedId, testId }: Props) {
+export function RegisterTable({ rows, cols, names, total, count, page, pageSize, onPage, onRow, selectedId, testId, runId }: Props) {
   const pages = Math.max(1, Math.ceil(count / pageSize))
   return (
-    <div data-testid={testId} className="overflow-x-auto rounded-lg border border-border bg-surface">
+    <div data-testid={testId} data-run-id={runId ?? ''} className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full text-sm">
         <thead className="bg-bg text-left font-mono text-xs uppercase tracking-widest text-text-muted">
           <tr>{cols.map((c) => <th key={c.key} scope="col" className={`px-4 py-3 font-normal ${c.align === 'right' ? 'text-right' : ''}`}>{c.label}</th>)}</tr>

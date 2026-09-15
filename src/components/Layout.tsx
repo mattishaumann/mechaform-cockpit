@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Brand } from './Brand'
+import { PeriodSelector } from './PeriodSelector'
 import { copy } from '../copy'
 import { AGENTS, enabledAgents } from '../lib/agents'
 
@@ -11,18 +12,21 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
     <div className="min-h-screen bg-bg text-text">
       <header className="flex items-center justify-between gap-4 border-b border-border bg-surface px-4 py-3 md:px-6">
         <Brand />
-        <div className="hidden text-sm text-text-muted sm:block">
-          <span className="font-mono text-xs uppercase tracking-widest">{copy.productName}</span>
-          <span className="mx-2">/</span>
-          <span>{copy.customer}</span>
+        <div className="flex items-center gap-6">
+          <PeriodSelector />
+          <div className="hidden text-sm text-text-muted lg:block">
+            <span className="font-mono text-xs uppercase tracking-widest">{copy.productName}</span>
+            <span className="mx-2">/</span>
+            <span>{copy.customer}</span>
+          </div>
         </div>
       </header>
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 md:flex-row md:gap-8 md:px-6 md:py-8">
         <nav aria-label="Main" className="-mx-4 flex shrink-0 gap-1 overflow-x-auto px-4 md:mx-0 md:w-52 md:flex-col md:overflow-visible md:px-0">
-          <NavLink to="/" end className={link}>{copy.cockpit.title}</NavLink>
+          <NavLink to={{ pathname: '/', search: window.location.search }} end className={link}>{copy.cockpit.title}</NavLink>
           <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">Agents</p>
           {enabledAgents.map((k) => (
-            <NavLink key={k} to={`/agents/${k}`} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
+            <NavLink key={k} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
           ))}
         </nav>
         <main className="min-w-0 flex-1">{children}</main>
