@@ -65,3 +65,6 @@ echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env.local
 ```
 
 The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three brief cases once against the API; `npm run llm:precompute` drafts the three highest-gap findings per case and prints the spend, stopping above 1 USD. In the app, "Aktion entwerfen" on a finding shows the draft next to its evidence; "Als gesendet markieren (Simulation)" only changes the status and never sends anything.
+
+Drafts survive agent re-runs. A run replaces the register rows of its period, so `mvp_drafts` carries the finding's natural key (case, supplier, article, order, volume, baseline, period) and `close_run` re-links every stored draft to the new row and restores statuses other than open (`supabase/sql/active_carry.sql` in the dataset folder). "Run all agents" therefore never discards the precomputed drafts.
+
