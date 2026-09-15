@@ -145,3 +145,24 @@
     }
   }
 }
+
+/* ---- Tacto brand layer (decision 2026-09-15: Tacto colours in the prototype) ------------
+ * Hex is allowed here and only here. Components use the Tailwind names below.
+ * Contrast: brand orange on the off-white bg is about 3.0:1, so it is used for large
+ * display figures, chart series and the mark, never for body text or small labels.
+ * Text-on-orange controls use --color-accent (accent-600, 5.05:1 with accent-fg). */
+@theme inline {
+  --color-brand:          #F26522;   /* Tacto orange: display figures, chart series, spark */
+  --color-brand-tint:     #FDE9E0;   /* highlighted table rows */
+  --color-series-neutral: #9E9E9E;   /* comparison series in charts */
+  --color-positive:       #1F9D57;   /* positive deltas, compliant states */
+  --color-ink:            #1F1F1F;   /* near-black for primary buttons */
+  --color-ink-hover:      #333333;
+}
+
+:root {
+  --bg:      #F7F6F3;                  /* Tacto off-white */
+  --surface: oklch(0.995 0.002 42.04); /* card white, tinted, never pure #fff */
+  --text:    #1F1F1F;
+  --text-muted: #6B6B6B;               /* 5.4:1 on the off-white bg */
+}
