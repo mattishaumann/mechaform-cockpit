@@ -33,7 +33,7 @@ export function RegisterTable({ rows, cols, names, total, count, page, pageSize,
           {rows.map((r) => (
             <tr key={r.id} data-order={r.order_no ?? ''} data-article={r.article_no ?? ''} aria-selected={selectedId === r.id || undefined} tabIndex={onRow ? 0 : undefined}
               onClick={() => onRow?.(r)} onKeyDown={(e) => { if (onRow && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRow(r) } }}
-              className={`border-t border-border transition-colors duration-fast ${onRow ? 'cursor-pointer hover:bg-brand-tint/60' : ''} aria-selected:bg-brand-tint`}>
+              className={`border-t border-border transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none ${onRow ? 'cursor-pointer hover:bg-brand-tint/60' : ''} aria-selected:bg-brand-tint`}>
               {cols.map((c) => <td key={c.key} className={`px-4 py-2.5 ${c.align === 'right' ? 'text-right tabular-nums' : ''}`}>{c.render(r, names)}</td>)}
             </tr>
           ))}

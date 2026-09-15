@@ -4,7 +4,7 @@ import { Brand } from './Brand'
 import { copy } from '../copy'
 import { AGENTS, enabledAgents } from '../lib/agents'
 
-const link = 'block whitespace-nowrap rounded-md px-3 py-2 text-sm text-text-muted no-underline transition-colors duration-fast hover:bg-surface-hover hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:font-medium md:whitespace-normal'
+const link = 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none block whitespace-nowrap rounded-md px-3 py-2 text-sm text-text-muted no-underline transition-colors duration-fast hover:bg-surface-hover hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:font-medium md:whitespace-normal'
 
 export function Layout({ children, agentNames }: { children: ReactNode; agentNames: Record<string, string> }) {
   return (

@@ -16,3 +16,16 @@ if [ -f src/copy.ts ]; then
 fi
 grep -q 'color-brand' src/styles/tokens.css || fail "brand token missing"
 echo "check-ui: ok"
+# C19: interactive components declare their states explicitly
+fv=$(grep -o 'focus-visible:' src/components/*.tsx | wc -l | tr -d ' ')
+dis=$(grep -o 'disabled:' src/components/*.tsx | wc -l | tr -d ' ')
+hov=$(grep -o 'hover:' src/components/*.tsx | wc -l | tr -d ' ')
+act=$(grep -o 'active:' src/components/*.tsx | wc -l | tr -d ' ')
+[ "$fv" -ge 5 ] || fail "focus-visible classes: $fv (need 5)"
+[ "$dis" -ge 2 ] || fail "disabled classes: $dis (need 2)"
+[ "$hov" -ge 5 ] || fail "hover classes: $hov (need 5)"
+[ "$act" -ge 2 ] || fail "active classes: $act (need 2)"
+grep -q 'role="status"' src/components/States.tsx || fail "loading skeleton missing"
+grep -q 'empty-state' src/components/States.tsx || fail "empty state missing"
+grep -q 'error-state' src/components/States.tsx || fail "error state missing"
+echo "check-ui: states ok (focus-visible $fv, disabled $dis, hover $hov, active $act)"

@@ -64,7 +64,7 @@ export function Agent() {
         <div className="rounded-lg border border-border bg-surface p-4 text-sm"><p className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.agent.action}</p><p className="mt-1">{row.customer_action}</p></div>
       </div>
       <p className="mt-4 text-sm text-text-muted"><span className="font-mono text-xs uppercase tracking-widest">{copy.agent.workedExample}</span> {row.calculation}</p>
-      {Boolean(config.extras?.includes('tier_year_chart') && stats.data?.tier_share_by_year) && <div className="mt-6"><TierYearChart data={stats.data.tier_share_by_year as TierYear[]} /></div>}
+      {Boolean(config.extras?.includes('tier_year_chart') && stats.data?.tier_share_by_year) && <div className="mt-6"><TierYearChart data={(stats.data?.tier_share_by_year ?? []) as TierYear[]} /></div>}
       {layers.map((l, i) => <Layer key={l.key} caseName={l.key} label={config.layers ? l.label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} />)}
       {selected && <EvidenceDrawer row={selected} onClose={() => setSelected(null)} />}
     </section>

@@ -35,7 +35,7 @@ export function AgentCard({ row, totals }: { row: CaseRow; totals: CaseTotal[] }
         </dl>
       )}
       <div className="mt-auto pt-5">
-        <Link to={`/agents/${row.case_key}`} className="inline-flex rounded-md bg-ink px-3 py-2 text-sm font-medium text-bg no-underline transition-colors duration-fast hover:bg-ink-hover active:scale-95">{copy.cockpit.open}</Link>
+        <Link to={`/agents/${row.case_key}`} className="focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none inline-flex rounded-md bg-ink px-3 py-2 text-sm font-medium text-bg no-underline transition-colors duration-fast hover:bg-ink-hover active:scale-95">{copy.cockpit.open}</Link>
       </div>
     </article>
   )

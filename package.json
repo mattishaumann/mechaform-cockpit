@@ -12,9 +12,11 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "check-ui": "sh scripts/check-ui.sh",
-    "check": "npm run typecheck && npm run test && npm run check-ui && npm run e2e && npm run e2e:c11 && npm run e2e:c13",
+    "check": "npm run typecheck && npm run test && npm run check-ui && npm run e2e && npm run e2e:c11 && npm run e2e:c13 && npm run e2e:c19a && npm run e2e:c19b",
     "e2e:c11": "VITE_ENABLED_AGENTS=contract_guard,tier_guard,terms_floor playwright test e2e/enabled.spec.ts",
-    "e2e:c13": "VITE_RUN_INTERVAL_MS=1500 playwright test e2e/lastrun.spec.ts"
+    "e2e:c13": "VITE_RUN_INTERVAL_MS=1500 playwright test e2e/lastrun.spec.ts",
+    "e2e:c19a": "VITE_ENABLED_AGENTS= playwright test e2e/states.spec.ts -g \"empty\"",
+    "e2e:c19b": "VITE_SUPABASE_URL=https://invalid.example playwright test e2e/states.spec.ts -g \"error\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
