@@ -25,6 +25,7 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
         <nav aria-label="Main" className="-mx-4 flex shrink-0 gap-1 overflow-x-auto px-4 md:mx-0 md:w-52 md:flex-col md:overflow-visible md:px-0">
           <NavLink to={{ pathname: '/', search: window.location.search }} end className={link}>{copy.cockpit.title}</NavLink>
           <NavLink to={{ pathname: '/register', search: window.location.search }} className={link}>{copy.register.title}</NavLink>
+          <NavLink data-testid="nav-trainer" to={{ pathname: '/trainer', search: window.location.search }} className={link}>{copy.trainer.nav}</NavLink>
           <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">Agents</p>
           {flagshipAgent && (
             <NavLink data-testid="nav-flagship" to={{ pathname: `/agents/${flagshipAgent}`, search: window.location.search }} className={link}>

@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { Agent } from './pages/Agent'
 import { Cockpit } from './pages/Cockpit'
 import { Register } from './pages/Register'
+import { Trainer } from './pages/Trainer'
 import { getCases } from './lib/data'
 import { DEFAULT_PERIOD, isValidDate, PeriodContext, type Period } from './lib/period'
 import { useQuery } from './lib/useQuery'
@@ -25,6 +26,7 @@ function Shell() {
           <Route path="/" element={<Cockpit />} />
           <Route path="/agents/:key" element={<Agent />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/trainer" element={<Trainer />} />
         </Routes>
       </Layout>
     </PeriodProvider>
