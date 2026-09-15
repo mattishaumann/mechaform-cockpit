@@ -3,8 +3,9 @@ import { toNumber } from './format'
 import type { Period } from './period'
 
 export interface CaseRow { case_key: string; name: string; trigger: string; rule: string; inputs: string[]; evidence_required: string; customer_action: string; example: Record<string, unknown>; calculation: string; value_2026: number; rows: number; confidence: number }
-export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number }
-export interface RegisterRow { id: number; case: string; order_no: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null }
+export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number; lines_checked: number | null }
+export interface RegisterRow { id: number; case: string; order_no: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null; action_type: string | null; status: string; draft_id: number | null }
+export interface EventRow { id: number; created_at: string; case_key: string | null; register_id: number | null; event_type: string; message: string }
 export interface OrderLine { order_no: number; order_position: number; order_date: string; supplier_no: number; supplier_name: string; article_no: number; description: string; plant: string; quantity: number; unit_price: number; spend: number; contract_no: string | null; buyer_no: string }
 export interface TrendRow { run_id: number; month: string; rows: number; total: number }
 export interface DedupRow { period_start: string; period_end: string; gross: number; dedup: number }
@@ -28,13 +29,24 @@ export async function getStats(): Promise<Stats> {
 export async function getLatestRuns(period: Period): Promise<RunRow[]> {
   const { data, error } = await supabase.from('v_latest_runs').select('*').eq('period_start', period.from).eq('period_end', period.to)
   fail(error)
-  return (data ?? []).map((r) => num(r as RunRow, ['rows', 'total']))
+  return (data ?? []).map((r) => num(r as RunRow, ['rows', 'total', 'lines_checked']))
 }
 
 export async function getRunLog(limit = 5): Promise<RunRow[]> {
   const { data, error } = await supabase.from('agent_runs').select('*').order('id', { ascending: false }).limit(limit)
   fail(error)
   return (data ?? []).map((r) => num(r as RunRow, ['rows', 'total']))
+}
+
+export async function getEvents(limit = 10): Promise<EventRow[]> {
+  const { data, error } = await supabase.from('mvp_events').select('*').order('id', { ascending: false }).limit(limit)
+  fail(error)
+  return (data ?? []) as EventRow[]
+}
+
+export async function setFindingStatus(registerId: number, status: string): Promise<void> {
+  const { error } = await supabase.rpc('set_finding_status', { p_register_id: registerId, p_status: status })
+  fail(error)
 }
 
 export async function runAgent(agent: string, period: Period): Promise<number> {
@@ -70,10 +82,11 @@ export async function getOrderLines(supplierNo: number, articleNo: number, perio
 }
 
 // Realtime: findings arriving in the register and runs closing. Returns the unsubscribe function.
-export function subscribe(onRegister: (row: RegisterRow) => void, onRun: (row: RunRow) => void): () => void {
+export function subscribe(onRegister: (row: RegisterRow) => void, onRun: (row: RunRow) => void, onEvent?: (row: EventRow) => void): () => void {
   const channel = supabase.channel('live')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mvp_register' }, (p) => onRegister(num(p.new as RegisterRow, ['volume', 'baseline', 'target', 'gap_eur'])))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_runs' }, (p) => onRun(num(p.new as RunRow, ['rows', 'total'])))
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mvp_events' }, (p) => onEvent?.(p.new as EventRow))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'mvp_register' }, (p) => onRegister(num(p.new as RegisterRow, ['volume', 'baseline', 'target', 'gap_eur'])))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'agent_runs' }, (p) => onRun(num(p.new as RunRow, ['rows', 'total', 'lines_checked'])))
     .subscribe()
   return () => { supabase.removeChannel(channel) }
 }

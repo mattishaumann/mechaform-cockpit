@@ -168,3 +168,8 @@
 }
 
 @keyframes drawer { from { transform: translateX(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Findings arriving from a run: transform and opacity only, 200 ms, fade only under reduced motion. */
+@keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.reveal { animation: reveal var(--duration-normal) var(--ease-out-quart) both; }
+@media (prefers-reduced-motion: reduce) { .reveal { animation: reveal var(--duration-normal) linear both; transform: none; } }

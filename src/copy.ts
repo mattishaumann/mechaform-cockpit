@@ -51,6 +51,9 @@ export const copy = {
     noRun: 'This agent has not run for the selected period. Run it to see findings.',
   },
   period: { label: 'Period', custom: 'Custom range', from: 'From', to: 'To', apply: 'Apply' },
+  feed: { title: 'Agent activity', none: 'No activity yet. Run an agent.' },
+  status: { open: 'OFFEN', draft_ready: 'ENTWURF', sent_simulated: 'GESENDET (SIMULIERT)', realised: 'REALISIERT', dismissed: 'VERWORFEN' } as Record<string, string>,
+  finding: { markSent: 'Als gesendet markieren (Simulation)', dismiss: 'Verwerfen', reopen: 'Wieder öffnen', linesChecked: 'lines checked', flagged: 'flagged' },
   runs: { title: 'Run log', none: 'No runs yet.' },
   table: {
     order: 'Order',

@@ -6,10 +6,11 @@ import { formatEur, formatInt, formatPrice } from '../lib/format'
 import { useQuery } from '../lib/useQuery'
 import { copy } from '../copy'
 import { Button } from './Button'
+import { FindingActions } from './FindingActions'
 import { Pill } from './Pill'
 import { ErrorState, Skeleton } from './States'
 
-export function EvidenceDrawer({ row, period, onClose }: { row: RegisterRow; period: Period; onClose: () => void }) {
+export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: RegisterRow; period: Period; onClose: () => void; onStatus: (status: string) => void }) {
   const q = useQuery<OrderLine[]>(() => getOrderLines(row.supplier_no ?? 0, row.article_no ?? 0, period), [row.id, period.from, period.to])
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
   const lines = q.data ?? []
@@ -23,6 +24,7 @@ export function EvidenceDrawer({ row, period, onClose }: { row: RegisterRow; per
         </div>
         <Button onClick={onClose} aria-label={copy.agent.close}>{copy.agent.close}</Button>
       </div>
+      <div className="border-b border-border px-6 py-3"><FindingActions row={row} onChanged={onStatus} /></div>
       <div className="overflow-auto px-6 py-4">
         {q.error && <ErrorState text={copy.cockpit.error} detail={q.error} />}
         {q.loading && <Skeleton lines={6} />}

@@ -27,6 +27,7 @@ export function AgentCard({ row, runs, search }: { row: CaseRow; runs: RunRow[];
         <>
           <p data-tabular className="mt-4 text-4xl font-semibold tracking-tight text-brand">{formatEur(main.total)}</p>
           <p className="mt-1 text-sm text-text-muted">{formatInt(main.rows)} {copy.cockpit.rows}. {copy.cockpit.confidence(formatConfidence(row.confidence))}</p>
+          <p data-testid={`run-detail-${row.case_key}`} className="mt-1 font-mono text-xs uppercase tracking-widest text-text-muted">{copy.cockpit.lastRun} {main.finished_at ? new Date(main.finished_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}, {formatInt(main.lines_checked ?? 0)} {copy.finding.linesChecked}, {formatInt(main.rows)} {copy.finding.flagged}</p>
           {extra.map((l) => <p key={l.key} className="mt-1 text-sm text-text-muted">Plus {formatEur(l.run!.total)} on {formatInt(l.run!.rows)} pairs, {l.label.toLowerCase()}</p>)}
         </>
       ) : (

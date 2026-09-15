@@ -2,6 +2,7 @@ import type { RegisterRow } from '../lib/data'
 import { formatEur, formatInt, formatPrice } from '../lib/format'
 import { copy } from '../copy'
 import { Button } from './Button'
+import { StatusPill } from './StatusPill'
 
 export interface Column { key: string; label: string; render: (r: RegisterRow, names: Names) => string; align?: 'right' }
 export interface Names { suppliers: Record<number, string>; articles: Record<number, string> }
@@ -19,11 +20,12 @@ export const columns = {
   tierPrice: { key: 'tierPrice', label: copy.table.tierPrice, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
   target: { key: 'target', label: copy.table.target, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
   gap: { key: 'gap', label: copy.table.gap, render: (r: RegisterRow) => formatEur(r.gap_eur), align: 'right' as const },
+  status: { key: 'status', label: 'Status', render: (r: RegisterRow) => r.status },
 } satisfies Record<string, Column>
 
-interface Props { rows: RegisterRow[]; cols: Column[]; names: Names; total: number; count: number; page: number; pageSize: number; onPage: (p: number) => void; onRow?: (r: RegisterRow) => void; selectedId?: number; testId: string; runId?: number }
+interface Props { rows: RegisterRow[]; cols: Column[]; names: Names; total: number; count: number; page: number; pageSize: number; onPage: (p: number) => void; onRow?: (r: RegisterRow) => void; selectedId?: number; testId: string; runId?: number; revealIds?: Set<number> }
 
-export function RegisterTable({ rows, cols, names, total, count, page, pageSize, onPage, onRow, selectedId, testId, runId }: Props) {
+export function RegisterTable({ rows, cols, names, total, count, page, pageSize, onPage, onRow, selectedId, testId, runId, revealIds }: Props) {
   const pages = Math.max(1, Math.ceil(count / pageSize))
   return (
     <div data-testid={testId} data-run-id={runId ?? ''} className="overflow-x-auto rounded-lg border border-border bg-surface">
@@ -35,8 +37,8 @@ export function RegisterTable({ rows, cols, names, total, count, page, pageSize,
           {rows.map((r) => (
             <tr key={r.id} data-order={r.order_no ?? ''} data-article={r.article_no ?? ''} aria-selected={selectedId === r.id || undefined} tabIndex={onRow ? 0 : undefined}
               onClick={() => onRow?.(r)} onKeyDown={(e) => { if (onRow && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRow(r) } }}
-              className={`border-t border-border transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none ${onRow ? 'cursor-pointer hover:bg-brand-tint/60' : ''} aria-selected:bg-brand-tint`}>
-              {cols.map((c) => <td key={c.key} className={`px-4 py-2.5 ${c.align === 'right' ? 'text-right tabular-nums' : ''}`}>{c.render(r, names)}</td>)}
+              className={`border-t border-border transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none ${onRow ? 'cursor-pointer hover:bg-brand-tint/60' : ''} aria-selected:bg-brand-tint ${revealIds?.has(r.id) ? 'reveal' : ''}`}>
+              {cols.map((c) => <td key={c.key} className={`px-4 py-2.5 ${c.align === 'right' ? 'text-right tabular-nums' : ''}`}>{c.key === 'status' ? <StatusPill status={r.status} /> : c.render(r, names)}</td>)}
             </tr>
           ))}
         </tbody>

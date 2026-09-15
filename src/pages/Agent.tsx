@@ -18,15 +18,15 @@ import { useQuery } from '../lib/useQuery'
 
 const PAGE = 50
 const layerColumns: Record<string, Column[]> = {
-  'Contract Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.contractPrice, columns.gap],
-  'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap],
-  'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap],
-  'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap],
-  'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap],
-  'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap],
+  'Contract Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.contractPrice, columns.gap, columns.status],
+  'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap, columns.status],
+  'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap, columns.status],
+  'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.status],
+  'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap, columns.status],
+  'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.status],
 }
 
-function Findings({ run, label, testId, onRow, selectedId, live }: { run: RunRow; label?: string; testId: string; onRow?: (r: RegisterRow) => void; selectedId?: number; live: number }) {
+function Findings({ run, label, testId, onRow, selectedId, live, revealIds }: { run: RunRow; label?: string; testId: string; onRow?: (r: RegisterRow) => void; selectedId?: number; live: number; revealIds: Set<number> }) {
   const [page, setPage] = useState(0)
   const q = useQuery(async () => {
     const { rows, count } = await getRegister(run.id, page, PAGE)
@@ -40,7 +40,7 @@ function Findings({ run, label, testId, onRow, selectedId, live }: { run: RunRow
     <section className="mt-6">
       {label && <h2 className="mb-3 text-lg font-semibold">{label}</h2>}
       <RegisterTable rows={q.data.rows} cols={layerColumns[run.case_name] ?? [columns.article, columns.supplier, columns.volume, columns.baseline, columns.gap]} names={q.data.names}
-        total={run.total} count={q.data.count} page={page} pageSize={PAGE} onPage={setPage} onRow={onRow} selectedId={selectedId} testId={testId} runId={run.id} />
+        total={run.total} count={q.data.count} page={page} pageSize={PAGE} onPage={setPage} onRow={onRow} selectedId={selectedId} testId={testId} runId={run.id} revealIds={revealIds} />
     </section>
   )
 }
@@ -50,6 +50,7 @@ export function Agent() {
   const { period } = usePeriod()
   const [tick, setTick] = useState(0)
   const [live, setLive] = useState(0)
+  const [revealIds, setRevealIds] = useState<Set<number>>(new Set())
   const [running, setRunning] = useState(false)
   const [selected, setSelected] = useState<RegisterRow | null>(null)
   const refresh = useCallback(() => setTick((t) => t + 1), [])
@@ -62,7 +63,7 @@ export function Agent() {
     const trend = layerRuns[0] ? await getTrend(layerRuns[0].id) : []
     return { row, config, layers, layerRuns, trend, stats }
   }, [key, period.from, period.to, tick])
-  useEffect(() => subscribe((r) => { if (q.data?.layerRuns.some((x) => x.id === r.run_id)) setLive((n) => n + 1) }, (r) => { if (r.agent === key && r.status === 'done') refresh() }), [key, refresh, q.data?.layerRuns])
+  useEffect(() => subscribe((r) => { setRevealIds((ids) => new Set(ids).add(r.id)); if (q.data?.layerRuns.some((x) => x.id === r.run_id)) setLive((n) => n + 1) }, (r) => { if (r.agent === key && r.status === 'done') refresh() }), [key, refresh, q.data?.layerRuns])
   useEffect(() => { setSelected(null) }, [period.from, period.to])
 
   if (q.error) return <ErrorState text={copy.cockpit.error} detail={q.error} />
@@ -91,8 +92,8 @@ export function Agent() {
       {config.extras?.includes('tier_year_chart') && Boolean(stats.tier_share_by_year) && <div className="mt-6"><TierYearChart data={stats.tier_share_by_year as TierYear[]} /></div>}
       <HowPanel row={row} />
       {!main && <div className="mt-6"><EmptyState text={copy.agent.noRun} /></div>}
-      {layerRuns.map((r, i) => <Findings key={r.id} run={r} label={layers.length > 1 ? layers[i].label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} live={live} />)}
-      {selected && selected.supplier_no != null && selected.article_no != null && <EvidenceDrawer row={selected} period={period} onClose={() => setSelected(null)} />}
+      {layerRuns.map((r, i) => <Findings key={r.id} run={r} label={layers.length > 1 ? layers[i].label : undefined} testId={`register-${key}-${i}`} onRow={i === 0 ? setSelected : undefined} selectedId={selected?.id} live={live} revealIds={revealIds} />)}
+      {selected && <EvidenceDrawer row={selected} period={period} onClose={() => setSelected(null)} onStatus={(st) => { setSelected({ ...selected, status: st }); setLive((n) => n + 1) }} />}
     </section>
   )
 }

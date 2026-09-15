@@ -3,10 +3,11 @@ import { useLocation } from 'react-router-dom'
 import { AgentCard } from '../components/AgentCard'
 import { Button } from '../components/Button'
 import { RunLog } from '../components/RunLog'
+import { ActivityFeed } from '../components/ActivityFeed'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { copy } from '../copy'
 import { AGENTS, enabledAgents } from '../lib/agents'
-import { getCases, getDedup, getLatestRuns, getRunLog, getStats, runAgent, subscribe, type RunRow } from '../lib/data'
+import { getCases, getDedup, getEvents, getLatestRuns, getRunLog, getStats, runAgent, subscribe, type RunRow } from '../lib/data'
 import { formatEur, formatInt } from '../lib/format'
 import { periodLabel, usePeriod } from '../lib/period'
 import { useQuery } from '../lib/useQuery'
@@ -18,10 +19,10 @@ export function Cockpit() {
   const [running, setRunning] = useState(false)
   const refresh = useCallback(() => setTick((t) => t + 1), [])
   const q = useQuery(async () => {
-    const [cases, runs, log, dedup, stats] = await Promise.all([getCases(), getLatestRuns(period), getRunLog(5), getDedup(period), getStats()])
-    return { cases, runs, log, dedup, stats }
+    const [cases, runs, log, dedup, stats, events] = await Promise.all([getCases(), getLatestRuns(period), getRunLog(5), getDedup(period), getStats(), getEvents(10)])
+    return { cases, runs, log, dedup, stats, events }
   }, [period.from, period.to, tick])
-  useEffect(() => subscribe(() => {}, () => refresh()), [refresh])
+  useEffect(() => subscribe(() => {}, () => refresh(), () => refresh()), [refresh])
 
   const runAll = async () => {
     setRunning(true)
@@ -71,8 +72,10 @@ export function Cockpit() {
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         {enabled.map((c) => <AgentCard key={c.case_key} row={c} runs={data.runs} search={search} />)}
       </div>
-      <h2 className="mt-8 font-mono text-xs uppercase tracking-widest text-text-muted">{copy.runs.title}</h2>
-      <div className="mt-2"><RunLog runs={data.log} /></div>
+      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div><h2 className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.feed.title}</h2><div className="mt-2"><ActivityFeed events={data.events} /></div></div>
+        <div><h2 className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.runs.title}</h2><div className="mt-2"><RunLog runs={data.log} /></div></div>
+      </div>
     </section>
   )
 }

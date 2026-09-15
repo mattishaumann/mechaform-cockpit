@@ -29,3 +29,7 @@ grep -q 'role="status"' src/components/States.tsx || fail "loading skeleton miss
 grep -q 'empty-state' src/components/States.tsx || fail "empty state missing"
 grep -q 'error-state' src/components/States.tsx || fail "error state missing"
 echo "check-ui: states ok (focus-visible $fv, disabled $dis, hover $hov, active $act)"
+# A8: findings arriving from a run get a reveal animation defined in the token file (transform and opacity only)
+grep -q '@keyframes reveal' src/styles/tokens.css || fail "reveal keyframes missing"
+grep -q "'reveal'" src/components/RegisterTable.tsx || fail "reveal class not applied to register rows"
+echo "check-ui: reveal ok"
