@@ -16,7 +16,9 @@
     "e2e:c11": "VITE_ENABLED_AGENTS=contract_guard,tier_guard,terms_floor playwright test e2e/enabled.spec.ts",
     "e2e:c19a": "VITE_ENABLED_AGENTS= playwright test e2e/states.spec.ts -g \"empty\"",
     "e2e:c19b": "VITE_SUPABASE_URL=https://invalid.example playwright test e2e/states.spec.ts -g \"error\"",
-    "e2e:l14": "VITE_ENABLED_AGENTS=contract_guard,tier_guard,terms_floor,price_radar,preferred_steering playwright test e2e/enabled.spec.ts -g \"L14\""
+    "e2e:l14": "VITE_ENABLED_AGENTS=contract_guard,tier_guard,terms_floor,price_radar,preferred_steering playwright test e2e/enabled.spec.ts -g \"L14\"",
+    "llm:tests": "node scripts/llm-tests.mjs",
+    "llm:precompute": "node scripts/precompute-drafts.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
