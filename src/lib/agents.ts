@@ -1,11 +1,11 @@
 // Agent registry: which cases the app shows and how. Adding an agent is one entry here plus its function, its mvp_cases row and a chart.
-export type CaseKey = 'contract_guard' | 'tier_guard' | 'terms_floor' | 'price_radar' | 'preferred_steering' | 'index_guard'
+export type CaseKey = 'contract_guard' | 'tier_guard' | 'terms_floor' | 'price_radar' | 'preferred_steering' | 'index_guard' | 'price_benchmark'
 
 export interface AgentConfig {
   key: CaseKey
-  module: 'Compliance Intelligence' | 'Spend & Cost Intelligence' | 'Supplier Intelligence'
+  module: 'Compliance Intelligence' | 'Spend & Cost Intelligence' | 'Supplier Intelligence' | 'Sourcing Intelligence'
   layers?: { key: string; label: string }[]   // register cases that belong to this agent (default: the agent name)
-  chart: 'contract_table' | 'tier_columns' | 'bridge' | 'indexed_line' | 'comparison_cards' | 'index_basket'   // the page's one chart
+  chart: 'contract_table' | 'tier_columns' | 'bridge' | 'indexed_line' | 'comparison_cards' | 'index_basket' | 'benchmark_cards'   // the page's one chart
 }
 
 export const AGENTS: Record<CaseKey, AgentConfig> = {
@@ -16,6 +16,8 @@ export const AGENTS: Record<CaseKey, AgentConfig> = {
   preferred_steering: { key: 'preferred_steering', module: 'Supplier Intelligence', chart: 'comparison_cards' },
   // preview agent (spec mvp-index-guard): prices against a cost index basket; runs on SAMPLE index data until a feed is loaded
   index_guard: { key: 'index_guard', module: 'Spend & Cost Intelligence', layers: [{ key: 'Index Guard', label: 'Per order line' }, { key: 'Index Guard (contracts)', label: 'Per contract position' }], chart: 'index_basket' },
+  // flagship preview agent (spec mvp-price-benchmark): the real part behind an article against public web prices; a sample of 4 articles
+  price_benchmark: { key: 'price_benchmark', module: 'Sourcing Intelligence', chart: 'benchmark_cards' },
 }
 
 const raw = (import.meta.env.VITE_ENABLED_AGENTS as string | undefined) ?? 'contract_guard,tier_guard,terms_floor,price_radar,preferred_steering'
@@ -30,3 +32,8 @@ export const previewAgents: CaseKey[] = rawPreview
   .split(',')
   .map((s) => s.trim())
   .filter((s): s is CaseKey => s in AGENTS && !enabledAgents.includes(s as CaseKey))
+
+// The flagship (spec mvp-price-benchmark): shown with the agents in its own card and nav entry, runnable like them,
+// but never among the five strategy cards and never in a total (mvp_cases.preview keeps it out of v_savings_split).
+export const flagshipAgent: CaseKey | null = ((import.meta.env.VITE_FLAGSHIP_AGENT as string | undefined) ?? 'price_benchmark') in AGENTS
+  ? (((import.meta.env.VITE_FLAGSHIP_AGENT as string | undefined) ?? 'price_benchmark') as CaseKey) : null

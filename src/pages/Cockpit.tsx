@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { AgentCard } from '../components/AgentCard'
+import { FlagshipCard } from '../components/FlagshipCard'
 import { PreviewStrip } from '../components/PreviewStrip'
 import { Button } from '../components/Button'
 import { Pill } from '../components/Pill'
@@ -8,7 +9,7 @@ import { RunLog } from '../components/RunLog'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { copy } from '../copy'
-import { enabledAgents } from '../lib/agents'
+import { enabledAgents, flagshipAgent } from '../lib/agents'
 import { getCases, getConfig, getEvents, getLatestRuns, getOpenTasks, getRunLog, getSavingsSplit, getStats, runAgent, subscribe, type CaseRow, type SavingsSplit } from '../lib/data'
 import { formatEur, formatInt, formatPct } from '../lib/format'
 import { periodLabel, usePeriod } from '../lib/period'
@@ -49,6 +50,7 @@ export function Cockpit() {
   const indexRate = data.config.find((c) => c.key === 'index_rate')?.value ?? 0
   const cliff = data.stats.contract_cliff_spend as { value: number } | undefined
   const blocked = data.stats.blocked_supplier_spend as { value: number; suppliers: number } | undefined
+  const flagship = flagshipAgent ? data.cases.find((c) => c.case_key === flagshipAgent) : undefined
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -73,6 +75,11 @@ export function Cockpit() {
             ))}
           </ul>
           {split && <p data-testid="gross" className="mt-4 border-t border-border pt-3 text-sm text-text-muted">{copy.cockpit.grossNote(formatEur(split.gross))}</p>}
+          {flagship && (
+            <p data-testid="benchmark-note" className="mt-3 text-sm text-text-muted">
+              <Link to={{ pathname: `/agents/${flagship.case_key}`, search }} className="rounded-sm text-text-muted underline decoration-border-strong underline-offset-2 transition-colors duration-fast hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-text">{flagship.name}</Link>: {copy.benchmark.headlineNote}. {copy.benchmark.headlineNoteTail}
+            </p>
+          )}
         </div>
         <div data-testid="cost-avoidance" className="rounded-lg border border-border bg-surface p-6">
           <p className={label}>{copy.cockpit.avoidanceLabel}</p>
@@ -96,6 +103,7 @@ export function Cockpit() {
         </div>
       </div>
 
+      {flagship && <FlagshipCard row={flagship} runs={data.runs} period={period} search={search} onRun={refresh} />}
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {shown.map((c) => <AgentCard key={c.case_key} row={c} runs={data.runs} search={search} openTasks={data.tasks[c.case_key] ?? 0} onSwitched={refresh} />)}
       </div>

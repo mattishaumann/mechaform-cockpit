@@ -1,0 +1,61 @@
+import { expect, test } from '@playwright/test'
+
+// Spec mvp-price-benchmark P5 to P7: the flagship's page, its method, and its place in the cockpit.
+const PAGE = '/agents/price_benchmark?from=2026-01-01&to=2026-12-31'
+
+test('P5 flagship page: development status, range with badges, disclaimer, four cards in high-case order', async ({ page }) => {
+  await page.goto(PAGE)
+  await expect(page.getByTestId('benchmark-dev-banner')).toContainText('very much in development')
+  const head = page.getByTestId('benchmark-headline')
+  await expect(head).toContainText('Flagship')
+  await expect(head).toContainText('Moonshot')
+  await expect(head.getByTestId('benchmark-confidence')).toContainText('Low confidence')
+  await expect(page.getByTestId('benchmark-range')).toHaveText(/Potential savings:\s*€1\.8M – €3\.0M \/ year\s*\(sample of 4 articles\)/)
+  await expect(page.getByTestId('benchmark-subline')).toContainText('4 of 5,077 articles')
+  await expect(page.getByTestId('benchmark-disclaimer')).toContainText('Indicative only. Verify before taking action.')
+
+  const cards = page.getByTestId('benchmark-card')
+  await expect(cards).toHaveCount(4)
+  expect(await cards.evaluateAll((els) => els.map((e) => e.getAttribute('data-article')))).toEqual(['710121', '707922', '712692', '712690'])
+  const box = cards.first()
+  await expect(box.getByTestId('benchmark-part')).toContainText('FEFCO 0201')
+  await expect(box).toContainText('Guess')
+  await expect(box).toContainText('Identification')
+  await expect(box).toContainText('Price comparability')
+  await expect(box.getByTestId('benchmark-gap')).toContainText('81% above the benchmark-based target')
+  await expect(box.getByTestId('benchmark-savings')).toHaveText(/€1,20\d,\d{3} – €1,96\d,\d{3}/)
+  await expect(box.getByTestId('benchmark-case')).toContainText('Change supplier')
+  await expect(box.getByTestId('benchmark-supplier').first()).toContainText('Verpackung Karton & Holz GmbH')
+  await expect(box.getByTestId('benchmark-actions').locator('li').first()).toContainText('Verify spec first')
+  await expect(box.getByTestId('benchmark-source')).toHaveAttribute('href', 'https://www.mypack.de/faltkarton-500x300x300-mm-2-wellig')
+  await expect(cards.nth(2).getByTestId('benchmark-case')).toContainText('Brand substitution')
+  await expect(cards.last().getByTestId('benchmark-case')).toContainText('Price confirmed')
+  await expect(cards.last().getByTestId('benchmark-gap')).toContainText('53% below list')
+  await expect(cards.last().getByTestId('benchmark-savings')).toHaveText('No savings case')
+})
+
+test('P6 method: four steps, today (sample) against at scale', async ({ page }) => {
+  await page.goto(PAGE)
+  const steps = page.getByTestId('benchmark-step')
+  await expect(steps).toHaveCount(4)
+  await expect(steps.nth(0)).toContainText('An LLM guessed the manufacturer part number')
+  await expect(steps.nth(0)).toContainText('A classifier trained on confirmed matches')
+  await expect(steps.nth(1)).toContainText('listed the suppliers with links')
+  await expect(steps.nth(3)).toContainText('RFQ')
+})
+
+test('P7 cockpit: headline unchanged with a grey note, flagship card with the range, run log shows no single figure', async ({ page }) => {
+  await page.goto('/?from=2026-01-01&to=2026-12-31')
+  await expect(page.getByTestId('hard-savings')).toHaveText('€3,926,438')
+  await expect(page.getByTestId('benchmark-note')).toContainText('potentially a lot')
+  await expect(page.getByTestId('benchmark-note')).toContainText('Not counted')
+  const card = page.getByTestId('flagship-card-price_benchmark')
+  await expect(card).toContainText('Low confidence')
+  await expect(card.getByTestId('flagship-value')).toHaveText('€1.8M – €3.0M / year')
+  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(5)
+  await expect(page.getByTestId('nav-flagship')).toBeVisible()
+  await card.getByTestId('flagship-run-button').click()
+  await expect(card.getByTestId('flagship-run-button')).toBeEnabled({ timeout: 30_000 })
+  const log = page.getByTestId('run-log')
+  await expect(log.locator('li', { hasText: 'External Price Benchmark' }).first()).toContainText('Range, low confidence', { timeout: 15_000 })
+})

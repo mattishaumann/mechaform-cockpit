@@ -16,7 +16,7 @@ export function RunLog({ runs }: { runs: RunRow[] }) {
           <span className="font-medium">{r.case_name}</span>
           <span className="text-text-muted">{periodLabel({ from: r.period_start, to: r.period_end })}</span>
           <span className="hidden text-text-muted sm:inline">{formatInt(r.rows ?? 0)} {copy.cockpit.rows}</span>
-          <span data-tabular className="hidden sm:inline">{formatEur(r.total ?? 0)}</span>
+          <span data-tabular className="hidden sm:inline">{r.agent === 'price_benchmark' ? copy.benchmark.runLog : formatEur(r.total ?? 0)}</span>
           <span className="flex items-center gap-2 text-text-muted"><Pill tone={r.status === 'done' ? 'positive' : 'brand'}>{r.status}</Pill><span className="hidden sm:inline">{time(r.finished_at)} {seconds(r)}</span></span>
         </li>
       ))}
