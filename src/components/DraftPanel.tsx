@@ -6,8 +6,8 @@ import { Button } from './Button'
 import { Pill } from './Pill'
 import { ErrorState, Skeleton } from './States'
 
-type Task = 'draft_supplier_message' | 'explain_for_cfo'
-const INTERNAL = new Set(['Price Radar', 'Preferred Steering'])
+// The model writes supplier messages only (scope reset 2026-09-15): the panel opens from the card's external block.
+const TASK = 'draft_supplier_message'
 
 // Typewriter reveal of a cached draft body, about 1.5 s in total; no streaming from the API.
 function useTypewriter(text: string, active: boolean) {
@@ -34,8 +34,7 @@ function Paragraph({ text, animate, onHover }: { text: string; animate: boolean;
 }
 
 export function DraftPanel({ row, lines, contractNo, onStatus }: { row: RegisterRow; lines: OrderLine[]; contractNo: string | null; onStatus: (status: string) => void }) {
-  const internal = INTERNAL.has(row.case)
-  const [task, setTask] = useState<Task>(internal ? 'explain_for_cfo' : 'draft_supplier_message')
+  const task = TASK
   const [draft, setDraft] = useState<DraftPayload | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [message, setMessage] = useState<string | null>(null)
@@ -71,8 +70,6 @@ export function DraftPanel({ row, lines, contractNo, onStatus }: { row: Register
         <p data-testid="draft-made-from" className="text-sm text-text-muted">{copy.draft.madeFrom(lines.length, contractNo)}</p>
         <p data-testid="draft-numbers-line" className="mt-1 text-sm text-text-muted">{copy.draft.numbersLine}</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {!internal && <Button variant={task === 'draft_supplier_message' ? 'primary' : 'secondary'} onClick={() => setTask('draft_supplier_message')}>{copy.draft.open}</Button>}
-          <Button variant={task === 'explain_for_cfo' ? 'primary' : 'secondary'} onClick={() => setTask('explain_for_cfo')}>{copy.draft.cfo}</Button>
           <Button onClick={() => request(Boolean(draft))} disabled={locked || state === 'loading'} loading={state === 'loading'}>{draft ? copy.draft.redo : copy.draft.open}</Button>
           <Button onClick={markSent} disabled={row.status === 'sent_simulated' || !draft || draft.refused}>{copy.finding.markSent}</Button>
         </div>

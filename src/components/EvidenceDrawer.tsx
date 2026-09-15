@@ -1,9 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Period } from '../lib/period'
 import type { OrderLine, RegisterRow } from '../lib/data'
 import { getOrderLines } from '../lib/data'
 import { supabase } from '../lib/supabase'
-import { useState } from 'react'
 import { formatEur, formatInt, formatPrice } from '../lib/format'
 import { useQuery } from '../lib/useQuery'
 import { copy } from '../copy'
@@ -11,6 +10,7 @@ import { Button } from './Button'
 import { FindingActions } from './FindingActions'
 import { DraftPanel } from './DraftPanel'
 import { Pill } from './Pill'
+import { RecommendationCard } from './RecommendationCard'
 import { ErrorState, Skeleton } from './States'
 
 export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: RegisterRow; period: Period; onClose: () => void; onStatus: (status: string) => void }) {
@@ -18,6 +18,10 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
   useEffect(() => { const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
   const lines = q.data ?? []
   const [contractNo, setContractNo] = useState<string | null>(null)
+  const [draftOpen, setDraftOpen] = useState(false)
+  const draftRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { setDraftOpen(false) }, [row.id])
+  useEffect(() => { if (draftOpen) draftRef.current?.scrollIntoView({ block: 'start' }) }, [draftOpen])
   useEffect(() => {
     if (row.case !== 'Contract Guard' || row.supplier_no == null || row.article_no == null) { setContractNo(null); return }
     supabase.from('framework_contracts').select('contract_no').eq('supplier_no', row.supplier_no).eq('article_no', row.article_no).limit(1).maybeSingle().then(({ data }) => setContractNo(data?.contract_no ?? null))
@@ -34,6 +38,8 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
       </div>
       <div className="border-b border-border px-6 py-3"><FindingActions row={row} onChanged={onStatus} /></div>
       <div className="overflow-auto px-6 py-4">
+        <RecommendationCard row={row} onStatus={onStatus} draftOpen={draftOpen} onDraft={() => setDraftOpen(true)} />
+        <h3 className="mt-6 font-mono text-xs uppercase tracking-widest text-text-muted">{copy.draft.evidence}</h3>
         {q.error && <ErrorState text={copy.cockpit.error} detail={q.error} />}
         {q.loading && <Skeleton lines={6} />}
         {!q.loading && !q.error && (
@@ -55,7 +61,7 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
             </tbody>
           </table>
         )}
-        {!q.loading && !q.error && <DraftPanel row={row} lines={lines} contractNo={contractNo} onStatus={onStatus} />}
+        {draftOpen && row.recommendation?.external && !q.loading && !q.error && <div ref={draftRef}><DraftPanel row={row} lines={lines} contractNo={contractNo} onStatus={onStatus} /></div>}
       </div>
     </aside>
   )

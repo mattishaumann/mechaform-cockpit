@@ -3,6 +3,7 @@ import { formatEur, formatInt, formatPrice } from '../lib/format'
 import { copy } from '../copy'
 import { Button } from './Button'
 import { StatusPill } from './StatusPill'
+import { recipientLabel, SequencePill } from './RecommendationCard'
 
 export interface Column { key: string; label: string; render: (r: RegisterRow, names: Names) => string; align?: 'right' }
 export interface Names { suppliers: Record<number, string>; articles: Record<number, string> }
@@ -21,7 +22,19 @@ export const columns = {
   target: { key: 'target', label: copy.table.target, render: (r: RegisterRow) => formatPrice(r.target), align: 'right' as const },
   gap: { key: 'gap', label: copy.table.gap, render: (r: RegisterRow) => formatEur(r.gap_eur), align: 'right' as const },
   status: { key: 'status', label: 'Status', render: (r: RegisterRow) => r.status },
+  recommendation: { key: 'recommendation', label: copy.reco.column, render: (r: RegisterRow) => (r.recommendation?.internal ?? []).map((x) => recipientLabel(x).name).join(', ') },
 } satisfies Record<string, Column>
+
+// Sequence pill plus who acts internally; the full card opens with the row.
+function RecommendationCell({ row }: { row: RegisterRow }) {
+  if (!row.recommendation) return null
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <SequencePill sequence={row.recommendation.sequence} />
+      <span className="text-xs text-text-muted">{columns.recommendation.render(row)}</span>
+    </div>
+  )
+}
 
 interface Props { rows: RegisterRow[]; cols: Column[]; names: Names; total: number; count: number; page: number; pageSize: number; onPage: (p: number) => void; onRow?: (r: RegisterRow) => void; selectedId?: number; testId: string; runId?: number; revealIds?: Set<number> }
 
@@ -38,7 +51,7 @@ export function RegisterTable({ rows, cols, names, total, count, page, pageSize,
             <tr key={r.id} data-order={r.order_no ?? ''} data-article={r.article_no ?? ''} aria-selected={selectedId === r.id || undefined} tabIndex={onRow ? 0 : undefined}
               onClick={() => onRow?.(r)} onKeyDown={(e) => { if (onRow && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRow(r) } }}
               className={`border-t border-border transition-colors duration-fast focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none ${onRow ? 'cursor-pointer hover:bg-brand-tint/60' : ''} aria-selected:bg-brand-tint ${revealIds?.has(r.id) ? 'reveal' : ''}`}>
-              {cols.map((c) => <td key={c.key} className={`px-4 py-2.5 ${c.align === 'right' ? 'text-right tabular-nums' : ''}`}>{c.key === 'status' ? <StatusPill status={r.status} /> : c.render(r, names)}</td>)}
+              {cols.map((c) => <td key={c.key} className={`px-4 py-2.5 ${c.align === 'right' ? 'text-right tabular-nums' : ''}`}>{c.key === 'status' ? <StatusPill status={r.status} /> : c.key === 'recommendation' ? <RecommendationCell row={r} /> : c.render(r, names)}</td>)}
             </tr>
           ))}
         </tbody>

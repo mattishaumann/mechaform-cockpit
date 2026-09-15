@@ -18,12 +18,12 @@ import { useQuery } from '../lib/useQuery'
 
 const PAGE = 50
 const layerColumns: Record<string, Column[]> = {
-  'Contract Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.contractPrice, columns.gap, columns.status],
-  'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap, columns.status],
-  'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap, columns.status],
-  'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.status],
-  'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap, columns.status],
-  'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.status],
+  'Contract Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.contractPrice, columns.gap, columns.recommendation, columns.status],
+  'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap, columns.recommendation, columns.status],
+  'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap, columns.recommendation, columns.status],
+  'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
+  'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
+  'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
 }
 
 function Findings({ run, label, testId, onRow, selectedId, live, revealIds }: { run: RunRow; label?: string; testId: string; onRow?: (r: RegisterRow) => void; selectedId?: number; live: number; revealIds: Set<number> }) {

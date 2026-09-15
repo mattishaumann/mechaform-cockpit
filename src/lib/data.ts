@@ -4,7 +4,10 @@ import type { Period } from './period'
 
 export interface CaseRow { case_key: string; name: string; trigger: string; rule: string; inputs: string[]; evidence_required: string; customer_action: string; example: Record<string, unknown>; calculation: string; value_2026: number; rows: number; confidence: number }
 export interface RunRow { id: number; agent: string; case_name: string; period_start: string; period_end: string; started_at: string; finished_at: string | null; status: string; rows: number; total: number; lines_checked: number | null }
-export interface RegisterRow { id: number; case: string; order_no: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null; action_type: string | null; status: string; draft_id: number | null }
+export interface Recipient { role: string; id: string | null; plant?: string; why: string; how: 'task'; due_days: number }
+export interface Recommendation { internal: Recipient[]; external: { recipient: string; document_type: string; how: 'email_draft' } | null; sequence: 'internal_first' | 'external_first' | 'internal_only'; rationale: string }
+export interface RegisterRow { id: number; case: string; order_no: number | null; order_position: number | null; article_no: number | null; supplier_no: number | null; volume: number; baseline: number; target: number; gap_eur: number; run_id: number | null; order_date: string | null; action_type: string | null; status: string; draft_id: number | null; recommendation: Recommendation | null }
+export interface TaskRow { id: number; register_id: number | null; case_key: string; role: string; recipient_id: string | null; why: string; due_date: string; status: 'open' | 'done'; created_at: string }
 export interface EventRow { id: number; created_at: string; case_key: string | null; register_id: number | null; event_type: string; message: string }
 export interface OrderLine { order_no: number; order_position: number; order_date: string; supplier_no: number; supplier_name: string; article_no: number; description: string; plant: string; quantity: number; unit_price: number; spend: number; contract_no: string | null; buyer_no: string }
 export interface TrendRow { run_id: number; month: string; rows: number; total: number }
@@ -47,6 +50,19 @@ export async function getEvents(limit = 10): Promise<EventRow[]> {
 export async function setFindingStatus(registerId: number, status: string): Promise<void> {
   const { error } = await supabase.rpc('set_finding_status', { p_register_id: registerId, p_status: status })
   fail(error)
+}
+
+export async function getTasks(registerId: number): Promise<TaskRow[]> {
+  const { data, error } = await supabase.from('mvp_tasks').select('*').eq('register_id', registerId).order('id')
+  fail(error)
+  return (data ?? []) as TaskRow[]
+}
+
+// Turns internal recipient number idx of a finding's recommendation into a task; idempotent in the database.
+export async function createTask(registerId: number, idx: number): Promise<number> {
+  const { data, error } = await supabase.rpc('create_task', { p_register_id: registerId, p_idx: idx })
+  fail(error)
+  return toNumber(data)
 }
 
 export async function runAgent(agent: string, period: Period): Promise<number> {

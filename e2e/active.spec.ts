@@ -49,6 +49,8 @@ test('A11 draft panel shows a precomputed Contract Guard draft with header lines
   await page.goto('/agents/contract_guard?from=2026-01-01&to=2026-12-31')
   const row = page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508565"][data-article="703947"]')
   await row.click()
+  // since spec mvp-recommendations R8 the panel opens from the recommendation card's external block
+  await page.getByTestId('recommendation-card').getByRole('button', { name: 'Entwurf erstellen' }).click()
   const panel = page.getByTestId('draft-panel')
   await expect(panel.getByTestId('draft-header')).toHaveText('Entwurf, vor dem Versand prüfen')
   await expect(panel.getByTestId('draft-made-from')).toContainText(/Erstellt aus \d+ Bestellpositionen und Vertrag 4602358/)
