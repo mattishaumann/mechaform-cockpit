@@ -63,7 +63,7 @@ export function RecommendationCard({ row, onStatus, onDraft, draftOpen }: { row:
   return (
     <section data-testid="recommendation-card" aria-labelledby={`reco-${row.id}`} className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 id={`reco-${row.id}`} className="text-lg font-semibold">{copy.reco.title}</h3>
+        <h3 id={`reco-${row.id}`} data-testid="rec-title" className="text-lg font-semibold">{rec.title ?? copy.reco.title}</h3>
         <SequencePill sequence={rec.sequence} />
       </div>
       <p data-testid="rec-rationale" className="mt-2 max-w-prose text-sm leading-relaxed">{rec.rationale}</p>

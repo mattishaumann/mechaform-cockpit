@@ -10,6 +10,7 @@ test('R8 Contract Guard card: rationale, ERST INTERN, task moves the finding to 
   await expect(row.getByTestId('sequence-pill')).toHaveAttribute('data-sequence', 'internal_first')
   await row.click()
   const card = page.getByTestId('recommendation-card')
+  await expect(card.getByTestId('rec-title')).toHaveText('Contract Guard empfiehlt Nachbelastung')   // R25
   await expect(card.getByTestId('rec-rationale')).toContainText('Vertrag 4602358')
   await expect(card.getByTestId('rec-rationale')).toContainText('€38,403')
   await expect(card.getByTestId('sequence-pill')).toContainText('ERST INTERN')
@@ -34,6 +35,7 @@ test('R8 Price Radar card is internal only: NUR INTERN and no external block', a
   await expect(row.getByTestId('sequence-pill')).toHaveAttribute('data-sequence', 'internal_only')
   await row.click()
   const card = page.getByTestId('recommendation-card')
+  await expect(card.getByTestId('rec-title')).toHaveText('Price Radar empfiehlt Verhandlungsvorbereitung')   // R25
   await expect(card.getByTestId('sequence-pill')).toContainText('NUR INTERN')
   await expect(card.getByTestId('rec-internal').first()).toContainText('Kategorieeinkauf')
   await expect(card.getByTestId('rec-rationale')).toContainText('Annahme')
