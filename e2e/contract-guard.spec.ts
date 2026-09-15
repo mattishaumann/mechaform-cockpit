@@ -10,7 +10,7 @@ test('C14 Contract Guard register lists every flagged row with the total', async
 
 test('C15 evidence drawer shows all 12 order lines with both prices', async ({ page }) => {
   await page.goto('/agents/contract_guard')
-  await page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508565"]').click()
+  await page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508565"][data-article="703947"]').click()
   const drawer = page.getByTestId('evidence-drawer')
   await expect(drawer.getByTestId('evidence-row')).toHaveCount(12)
   await expect(drawer).toContainText('€866.70')
