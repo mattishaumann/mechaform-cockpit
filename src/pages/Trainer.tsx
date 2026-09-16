@@ -87,14 +87,14 @@ function TurnView({ turn, supplier, facts, live = false }: { turn: Turn; supplie
     <article data-testid="turn" data-turn={turn.turn_no} data-live={live || undefined} className="reveal space-y-3">
       <div className="rounded-lg bg-bg p-4">
         <p className={label}>{copy.trainer.you}</p>
-        <p className="mt-1 max-w-prose text-sm">{turn.buyer}</p>
+        <p className="mt-1 max-w-prose text-base leading-relaxed">{turn.buyer}</p>
       </div>
       <div data-testid="supplier-reply" className="rounded-lg border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className={label}>{copy.trainer.supplierRole(supplier)}</p>
           <Pill tone={turn.supplier.concession === 'none' ? 'neutral' : 'positive'}>{copy.trainer.concession[turn.supplier.concession] ?? turn.supplier.concession}</Pill>
         </div>
-        <p className="mt-1 max-w-prose text-sm">{turn.supplier.message}</p>
+        <p className="mt-1 max-w-prose text-base leading-relaxed">{turn.supplier.message}</p>
       </div>
       <aside data-testid="coach-card" data-assessment={turn.coach.assessment} className="rounded-lg border border-border bg-brand-tint/40 p-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -117,6 +117,9 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const end = useRef<HTMLDivElement>(null)
+  const box = useRef<HTMLTextAreaElement>(null)
+  // The suggested opening is long; the box grows to fit it rather than making him scroll inside a small field.
+  useEffect(() => { const el = box.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` }, [message])
   useEffect(() => { if (turns.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [turns.length])
 
   const left = CHAT_MAX - turns.length
@@ -153,16 +156,21 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
       {turns.map((t) => <TurnView key={t.id} turn={t} supplier={supplier} facts={facts} live />)}
       {pending && (
         <div className="space-y-3">
-          <div className="rounded-lg bg-bg p-4"><p className={label}>{copy.trainer.you}</p><p className="mt-1 max-w-prose text-sm">{pending}</p></div>
-          <div role="status" aria-label={copy.cockpit.loading} className="h-24 animate-pulse rounded-lg bg-border" />
+          <div className="rounded-lg bg-bg p-4"><p className={label}>{copy.trainer.you}</p><p className="mt-1 max-w-prose text-base leading-relaxed">{pending}</p></div>
+          <div role="status" data-testid="typing" className="flex items-center gap-3 rounded-lg border border-border bg-surface p-4">
+            <span aria-hidden="true" className="flex gap-1">
+              {[0, 1, 2].map((i) => <span key={i} className="typing-dot h-2 w-2 rounded-full bg-brand" />)}
+            </span>
+            <span className="text-sm text-text-muted">{copy.trainer.typing(supplier)}</span>
+          </div>
         </div>
       )}
       <div ref={end} />
       <form data-testid="chat-form" onSubmit={submit} className="space-y-2">
         <label htmlFor="chat-message" className={label}>{copy.trainer.liveLabel}</label>
-        <textarea id="chat-message" value={message} onChange={(e) => setMessage(e.target.value)} disabled={busy || left <= 0} rows={3} maxLength={600} placeholder={copy.trainer.livePlaceholder}
+        <textarea id="chat-message" ref={box} value={message} onChange={(e) => setMessage(e.target.value)} disabled={busy || left <= 0} rows={4} maxLength={600} placeholder={copy.trainer.livePlaceholder}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
-          className="block w-full resize-y rounded-md border border-border-strong bg-surface px-3 py-2 text-base text-text transition-colors duration-fast placeholder:text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50" />
+          className="block max-h-96 w-full resize-none overflow-y-auto rounded-md border border-border-strong bg-surface px-4 py-3 text-base leading-relaxed text-text transition-colors duration-fast placeholder:text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50" />
         {error && <p role="alert" data-testid="live-error" className="text-sm text-danger-500">{error}</p>}
         <div className="flex justify-end"><Button type="submit" variant="primary" loading={busy} disabled={!message.trim() || left <= 0}>{copy.trainer.send}</Button></div>
       </form>

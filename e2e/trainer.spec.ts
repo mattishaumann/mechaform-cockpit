@@ -65,6 +65,26 @@ test('T6 practice chat (answers routed, no spend): turns stack up and the turn c
   await expect(page.getByTestId('coach-card').last()).toHaveAttribute('data-assessment', 'ok')
 })
 
+test('T6 while the supplier answers, the typing indicator says who is answering and then goes', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/start_trainer_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424244' }))
+  await page.route('**/functions/v1/trainer-turn', async (r) => {
+    await new Promise((done) => setTimeout(done, 1500))   // a real model turn takes seconds; the wait is what the indicator covers
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ turn: cannedTurn(1) }) })
+  })
+  await page.goto('/trainer')
+  await page.getByTestId('candidate').first().click()
+  const box = page.getByTestId('chat-form').getByLabel('Your next message')
+  // the box grows to fit the suggested opening instead of scrolling inside a small field
+  expect(await box.evaluate((el) => el.clientHeight)).toBeGreaterThan(160)
+  await box.fill('Your prices run above the basket on the articles without a contract.')
+  await box.press('Enter')
+  const typing = page.getByTestId('typing')
+  await expect(typing).toContainText('is answering')
+  await expect(typing).toHaveAttribute('role', 'status')
+  await expect(page.locator('[data-testid="turn"][data-live]')).toHaveCount(1)
+  await expect(typing).toHaveCount(0)
+})
+
 test('T6 a rejected reply shows the inline error and keeps the message', async ({ page }) => {
   await page.route('**/rest/v1/rpc/start_trainer_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424243' }))
   await page.route('**/functions/v1/trainer-turn', (r) => r.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'rejected', reasons: ['number not in input: €19,200'] }) }))

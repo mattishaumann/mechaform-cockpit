@@ -173,3 +173,10 @@
 @keyframes reveal { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .reveal { animation: reveal var(--duration-normal) var(--ease-out-quart) both; }
 @media (prefers-reduced-motion: reduce) { .reveal { animation: reveal var(--duration-normal) linear both; transform: none; } }
+
+/* The supplier is typing: three dots, opacity only, staggered. Under reduced motion they stand still. */
+@keyframes typing { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+.typing-dot { animation: typing 1.2s ease-in-out infinite both; }   /* a loop wants a symmetric curve, not the enter easing */
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) { .typing-dot { animation: none; opacity: 0.6; } }
