@@ -6,7 +6,8 @@ const num = <T extends object>(r: T, keys: (keyof T)[]): T => { const o = { ...r
 
 export const TRAINER = { supplierNo: 3000742, from: '2026-01-01', to: '2026-12-31' }   // Getriebebau Arnold, calendar 2026
 
-export interface Candidate { supplier_no: number; supplier_name: string; gap: number; lines: number; articles: number; deviation: number; free_spend: number; free_articles: number; has_contract_elsewhere: boolean }
+export interface Candidate { supplier_no: number; supplier_name: string; gap: number; lines: number; articles: number; deviation: number; free_spend: number; free_articles: number; has_contract_elsewhere: boolean; spend: number; first_order: string; years_active: number; spend_all_years: number; why: string; opening: string }
+export interface SupplierHit { supplier_no: number; supplier_name: string; spend: number; order_lines: number; years_active: number }
 export interface SupplierHistory { supplier_name: string; city: string | null; country: string | null; supplier_status: string; public_website_url: string | null; spend: number; order_lines: number; orders: number; articles: number; on_time: number | null; buyers: string; categories: string | null; first_order: string; last_order: string; years_active: number; spend_all_years: number }
 export interface BriefFact { fact_id: string; case_name: string | null; fact: string; value: number }
 export interface SupplierReply { message: string; concession: 'none' | 'partial' | 'full'; numbers_used: { value: string; source: string }[] }
@@ -20,7 +21,21 @@ const fail = (e: { message: string } | null) => { if (e) throw new Error(e.messa
 export async function getCandidates(limit = 3): Promise<Candidate[]> {
   const { data, error } = await supabase.rpc('negotiation_candidates', { p_start: TRAINER.from, p_end: TRAINER.to, p_limit: limit })
   fail(error)
-  return ((data ?? []) as Candidate[]).map((r) => num(r, ['supplier_no', 'gap', 'lines', 'articles', 'deviation', 'free_spend', 'free_articles']))
+  return ((data ?? []) as Candidate[]).map((r) => num(r, ['supplier_no', 'gap', 'lines', 'articles', 'deviation', 'free_spend', 'free_articles', 'spend', 'years_active', 'spend_all_years']))
+}
+
+// Target any supplier instead of the three recommended ones
+export async function searchSuppliers(query: string): Promise<SupplierHit[]> {
+  const { data, error } = await supabase.rpc('search_suppliers', { p_query: query, p_start: TRAINER.from, p_end: TRAINER.to, p_limit: 8 })
+  fail(error)
+  return ((data ?? []) as SupplierHit[]).map((r) => num(r, ['supplier_no', 'spend', 'order_lines', 'years_active']))
+}
+
+// The suggested first message for a supplier that is not one of the three: built in SQL from what the period knows
+export async function getOpening(supplierNo: number): Promise<string> {
+  const { data, error } = await supabase.rpc('supplier_opening', { p_supplier: supplierNo, p_start: TRAINER.from, p_end: TRAINER.to })
+  fail(error)
+  return (data as string | null) ?? ''
 }
 
 export async function getSupplierHistory(supplierNo: number): Promise<SupplierHistory | null> {
