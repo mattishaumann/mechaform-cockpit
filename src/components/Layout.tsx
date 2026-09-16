@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Brand } from './Brand'
 import { PeriodSelector } from './PeriodSelector'
 import { copy } from '../copy'
-import { AGENTS, enabledAgents, flagshipAgent, previewAgents } from '../lib/agents'
+import { AGENTS, enabledAgents, previewAgents } from '../lib/agents'
 
 const link = 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none block whitespace-nowrap rounded-md px-3 py-2 text-sm text-text-muted no-underline transition-colors duration-fast hover:bg-surface-hover hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:font-medium md:whitespace-normal'
 
@@ -27,11 +27,6 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
           <NavLink to={{ pathname: '/register', search: window.location.search }} className={link}>{copy.register.title}</NavLink>
           <NavLink data-testid="nav-trainer" to={{ pathname: '/trainer', search: window.location.search }} className={link}>{copy.trainer.nav}</NavLink>
           <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">Agents</p>
-          {flagshipAgent && (
-            <NavLink data-testid="nav-flagship" to={{ pathname: `/agents/${flagshipAgent}`, search: window.location.search }} className={link}>
-              {agentNames[flagshipAgent] ?? AGENTS[flagshipAgent].key}<span className="ml-2 font-mono text-xs uppercase tracking-widest text-brand">{copy.benchmark.navMark}</span>
-            </NavLink>
-          )}
           {enabledAgents.map((k) => (
             <NavLink key={k} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
           ))}
