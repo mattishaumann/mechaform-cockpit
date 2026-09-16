@@ -93,9 +93,9 @@ export function Agent() {
           <p data-testid="agent-summary" className="mt-1 max-w-prose text-text-muted">{row.summary}</p>
           <p className="mt-1 text-sm text-text-muted">{periodLabel(period)}</p>
         </div>
-        <Button variant="primary" data-testid="run-agent" loading={running} onClick={run}>{copy.agent.run}</Button>
+        <Button variant="primary" data-testid="run-agent" loading={running} onClick={run}>{config.chart === 'benchmark_cards' ? copy.benchmark.runScan : copy.agent.run}</Button>
       </div>
-      {flagship && <div data-testid="agent-chart" className="mt-6"><PriceBenchmarkPanel runId={main?.id ?? null} /></div>}
+      {flagship && <div data-testid="agent-chart" className="mt-6"><PriceBenchmarkPanel runId={main?.id ?? null} finishedAt={main?.finished_at ?? null} /></div>}
       {!flagship && <>
       <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.table.gap}</dt><dd data-testid="kpi-gap" data-tabular className="mt-1 text-3xl font-semibold tracking-tight text-brand">{main ? formatEur(main.total) : copy.cockpit.notRun}</dd></div>
