@@ -1,6 +1,8 @@
 // Every user-facing string lives here. Sentence case. No em dashes, no exclamation marks, no emoji.
 export const copy = {
   brand: 'tacto',
+  // sidebar groups: what is live, what the agents are, what is a preview
+  nav: { overview: 'Overview', agents: 'Agents', preview: 'Preview agents' },
   productName: 'Procurement cockpit',
   customer: 'MechaForm GmbH',
   cockpit: {
@@ -340,7 +342,7 @@ export const copy = {
     suggested: 'Suggested opening, from the supplier\'s own numbers. Edit before you send.',
     chooseNote: 'Suppliers whose prices run furthest above the cost index basket where nothing is agreed yet: no framework contract, no price tiers, no Skonto on these articles. Index Guard runs on sample index data.',
     aboveBasket: (pct: string) => `${pct} above the cost basket`,
-    openSpend: (spend: string, n: number) => `${spend} on ${n} articles without an agreement`,
+    openSpend: (spend: string, n: number) => `${spend} on ${n} ${n === 1 ? 'article' : 'articles'} without an agreement`,
     gapLabel: 'Gap in the period',
     startWith: (name: string) => `Negotiate with ${name}`,
     exampleTitle: 'Or replay the stored example',
