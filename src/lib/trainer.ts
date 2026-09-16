@@ -2,8 +2,12 @@
 import { supabase } from './supabase'
 import { toNumber } from './format'
 
+const num = <T extends object>(r: T, keys: (keyof T)[]): T => { const o = { ...r }; for (const k of keys) (o as Record<string, unknown>)[k as string] = toNumber(o[k]); return o }
+
 export const TRAINER = { supplierNo: 3000742, from: '2026-01-01', to: '2026-12-31' }   // Getriebebau Arnold, calendar 2026
 
+export interface Candidate { supplier_no: number; supplier_name: string; gap: number; lines: number; articles: number; deviation: number; free_spend: number; free_articles: number; has_contract_elsewhere: boolean }
+export interface SupplierHistory { supplier_name: string; city: string | null; country: string | null; supplier_status: string; public_website_url: string | null; spend: number; order_lines: number; orders: number; articles: number; on_time: number | null; buyers: string; categories: string | null; first_order: string; last_order: string; years_active: number; spend_all_years: number }
 export interface BriefFact { fact_id: string; case_name: string | null; fact: string; value: number }
 export interface SupplierReply { message: string; concession: 'none' | 'partial' | 'full'; numbers_used: { value: string; source: string }[] }
 export interface CoachCard { assessment: 'strong' | 'ok' | 'weak'; note: string; next_fact_id: string; used_fact_ids: string[] }
@@ -11,6 +15,26 @@ export interface Turn { id: number; session_id: number; turn_no: number; buyer: 
 export interface TurnResponse { turn?: Turn; error?: string; reasons?: string[] }
 
 const fail = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
+
+// The three negotiation cases: prices furthest above the cost index basket where nothing is agreed yet
+export async function getCandidates(limit = 3): Promise<Candidate[]> {
+  const { data, error } = await supabase.rpc('negotiation_candidates', { p_start: TRAINER.from, p_end: TRAINER.to, p_limit: limit })
+  fail(error)
+  return ((data ?? []) as Candidate[]).map((r) => num(r, ['supplier_no', 'gap', 'lines', 'articles', 'deviation', 'free_spend', 'free_articles']))
+}
+
+export async function getSupplierHistory(supplierNo: number): Promise<SupplierHistory | null> {
+  const { data, error } = await supabase.rpc('supplier_history', { p_supplier: supplierNo, p_start: TRAINER.from, p_end: TRAINER.to })
+  fail(error)
+  const row = (data as SupplierHistory[] | null)?.[0]
+  return row ? num(row, ['spend', 'order_lines', 'orders', 'articles', 'on_time', 'years_active', 'spend_all_years']) : null
+}
+
+export async function startTrainerSession(supplierNo: number): Promise<number> {
+  const { data, error } = await supabase.rpc('start_trainer_session', { p_supplier_no: supplierNo, p_start: TRAINER.from, p_end: TRAINER.to })
+  fail(error)
+  return toNumber(data)
+}
 
 export async function getStoredSession(): Promise<{ id: number; supplier_name: string } | null> {
   const { data, error } = await supabase.from('mvp_trainer_sessions').select('id').eq('kind', 'stored').eq('supplier_no', TRAINER.supplierNo).eq('period_start', TRAINER.from).eq('period_end', TRAINER.to).maybeSingle()
@@ -27,10 +51,10 @@ export async function getTurns(sessionId: number): Promise<Turn[]> {
   return (data ?? []) as Turn[]
 }
 
-export async function getBrief(): Promise<BriefFact[]> {
-  const { data, error } = await supabase.from('v_supplier_brief').select('fact_id,case_name,fact,value').eq('supplier_no', TRAINER.supplierNo).eq('period_start', TRAINER.from).eq('period_end', TRAINER.to)
+export async function getBrief(supplierNo: number = TRAINER.supplierNo): Promise<BriefFact[]> {
+  const { data, error } = await supabase.from('v_supplier_brief').select('fact_id,case_name,fact,value').eq('supplier_no', supplierNo).eq('period_start', TRAINER.from).eq('period_end', TRAINER.to)
   fail(error)
-  const order = ['spend', 'contract_guard', 'contract_guard_top', 'tier_guard', 'terms_floor', 'preferred_steering', 'contracts_end']
+  const order = ['spend', 'index_guard', 'contract_guard', 'contract_guard_top', 'tier_guard', 'terms_floor', 'preferred_steering', 'contracts_end']
   const rank = (id: string) => { const i = order.findIndex((o) => id === o || id.startsWith(`${o}_`)); return i < 0 ? order.length : i }
   return ((data ?? []) as BriefFact[]).map((f) => ({ ...f, value: toNumber(f.value) })).sort((a, b) => rank(a.fact_id) - rank(b.fact_id) || a.fact_id.localeCompare(b.fact_id))
 }

@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react'
 import { copy } from '../copy'
 import { formatEur, formatInt, formatPct, formatPrice } from '../lib/format'
 import { formatMillions, getBenchmarkItems, getBenchmarkSummary, type BenchmarkItem } from '../lib/priceBenchmark'
 import { useQuery } from '../lib/useQuery'
+import { Fold } from './Fold'
 import { Pill } from './Pill'
 import { EmptyState, ErrorState, Skeleton } from './States'
 
@@ -12,16 +12,6 @@ const b = copy.benchmark
 // "low – actual spec unknown; ..." reads as level plus reason; a bare level has no reason
 const split = (s: string) => { const [level, ...rest] = s.split(' – '); return { level, reason: rest.join(' – ') || null } }
 const stamp = (s: string) => new Date(s).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-
-// Everything explanatory folds away: the page leads with the recommendation, the next step and the money.
-function Fold({ summary, children, testId }: { summary: string; children: ReactNode; testId?: string }) {
-  return (
-    <details data-testid={testId} className="text-sm">
-      <summary className="w-fit cursor-pointer rounded-sm font-medium text-text-muted transition-colors duration-fast hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:text-text">{summary}</summary>
-      <div className="mt-3">{children}</div>
-    </details>
-  )
-}
 
 function DevBanner() {
   return (
@@ -177,7 +167,7 @@ export function PriceBenchmarkPanel({ runId, finishedAt }: { runId: number | nul
       <DevBanner />
       {s && (
         <section data-testid="benchmark-headline" className="rounded-lg border border-border bg-surface p-6">
-          <div className="flex flex-wrap gap-2"><Pill tone="brand">{b.flagship}</Pill><Pill tone="neutral">{b.moonshot}</Pill><span data-testid="benchmark-confidence"><Pill tone="neutral">{b.lowConfidence}</Pill></span></div>
+          <div className="flex flex-wrap gap-2"><Pill tone="brand">{b.inDevelopment}</Pill><Pill tone="neutral">{b.moonshot}</Pill><span data-testid="benchmark-confidence"><Pill tone="neutral">{b.lowConfidence}</Pill></span></div>
           <p data-testid="benchmark-range" className="mt-4">
             <span className="block text-sm text-text-muted">{b.headlineLabel}</span>{' '}
             <span data-tabular className="block text-4xl font-semibold tracking-tight">{b.headlineRange(formatMillions(s.savings_low), formatMillions(s.savings_high))}</span>{' '}

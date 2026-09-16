@@ -19,8 +19,9 @@ test('I7 Index Guard page: sample banner, category chart, basket, both layers af
   await expect(page.getByTestId('evidence-drawer')).toBeVisible()
 })
 
-test('I8 Index Guard is a preview, not a strategy card', async ({ page }) => {
+test('I8 cockpit keeps Index Guard out of the strategy cards and shows it as a preview', async ({ page }) => {
   await page.goto('/')
+  await expect(page.getByTestId('agent-card-index_guard')).toHaveCount(0)   // a preview, never a strategy card
   await expect(page.getByTestId('preview-card-index_guard')).toContainText('Sample index data')
   await expect(page.getByTestId('nav-preview-index_guard')).toBeVisible()
   await expect(page.locator('[data-testid="agent-card-index_guard"]')).toHaveCount(0)   // the card count itself is R11's assertion

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { AgentCard } from '../components/AgentCard'
-import { FlagshipCard } from '../components/FlagshipCard'
 import { PreviewStrip } from '../components/PreviewStrip'
 import { Button } from '../components/Button'
 import { Pill } from '../components/Pill'
@@ -9,7 +8,7 @@ import { RunLog } from '../components/RunLog'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { copy } from '../copy'
-import { enabledAgents, flagshipAgent, previewAgents } from '../lib/agents'
+import { enabledAgents, previewAgents } from '../lib/agents'
 import { getCases, getConfig, getEvents, getLatestRuns, getOpenTasks, getRunLog, getSavingsSplit, getStats, runAgent, subscribe, type CaseRow, type SavingsSplit } from '../lib/data'
 import { formatEur, formatInt, formatPct } from '../lib/format'
 import { periodLabel, usePeriod } from '../lib/period'
@@ -50,9 +49,7 @@ export function Cockpit() {
   const indexRate = data.config.find((c) => c.key === 'index_rate')?.value ?? 0
   const cliff = data.stats.contract_cliff_spend as { value: number } | undefined
   const blocked = data.stats.blocked_supplier_spend as { value: number; suppliers: number } | undefined
-  // the benchmark keeps its grey line under the headline (Mattis, 2026-09-16) while sitting in the preview strip, not as a card
-  const noteKey = flagshipAgent ?? (previewAgents.includes('price_benchmark') ? 'price_benchmark' : null)
-  const flagship = noteKey ? data.cases.find((c) => c.case_key === noteKey) : undefined
+  const benchmark = previewAgents.includes('price_benchmark') ? data.cases.find((c) => c.case_key === 'price_benchmark') : undefined
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -77,9 +74,9 @@ export function Cockpit() {
             ))}
           </ul>
           {split && <p data-testid="gross" className="mt-4 border-t border-border pt-3 text-sm text-text-muted">{copy.cockpit.grossNote(formatEur(split.gross))}</p>}
-          {flagship && (
+          {benchmark && (
             <p data-testid="benchmark-note" className="mt-3 text-sm text-text-muted">
-              <Link to={{ pathname: `/agents/${flagship.case_key}`, search }} className="rounded-sm text-text-muted underline decoration-border-strong underline-offset-2 transition-colors duration-fast hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-text">{flagship.name}</Link>: {copy.benchmark.headlineNote}. {copy.benchmark.headlineNoteTail}
+              <Link to={{ pathname: `/agents/${benchmark.case_key}`, search }} className="rounded-sm text-text-muted underline decoration-border-strong underline-offset-2 transition-colors duration-fast hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-text">{benchmark.name}</Link>: {copy.benchmark.headlineNote}. {copy.benchmark.headlineNoteTail}
             </p>
           )}
         </div>
@@ -103,11 +100,10 @@ export function Cockpit() {
         </div>
       </div>
 
-      {flagshipAgent && flagship && <FlagshipCard row={flagship} runs={data.runs} period={period} search={search} onRun={refresh} />}
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {shown.map((c) => <AgentCard key={c.case_key} row={c} runs={data.runs} search={search} openTasks={data.tasks[c.case_key] ?? 0} onSwitched={refresh} />)}
       </div>
-      <PreviewStrip cases={data.cases} runs={data.runs} search={search} period={period} onRun={refresh} />
+      <PreviewStrip cases={data.cases} runs={data.runs} search={search} />
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <div><h2 className={label}>{copy.feed.title}</h2><div className="mt-2"><ActivityFeed events={data.events} /></div></div>
         <div><h2 className={label}>{copy.runs.title}</h2><div className="mt-2"><RunLog runs={data.log} /></div></div>

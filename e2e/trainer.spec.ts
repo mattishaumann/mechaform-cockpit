@@ -1,57 +1,75 @@
 import { expect, test } from '@playwright/test'
 
-test('T5 trainer: Preview pill, three roadmap stages, the brief, five stored turns stepped without calling the model', async ({ page }) => {
+// The trainer opens on three recommended negotiations (Index Guard findings where nothing is agreed), then a case
+// gives its brief, what we know about the supplier, and a practice chat. The stored Arnold session replays without a model call.
+test('T5 trainer: Preview pill, roadmap, three recommended cases, stored example steps without calling the model', async ({ page }) => {
   const calls: string[] = []
   page.on('request', (r) => { if (r.url().includes('/functions/v1/trainer-turn')) calls.push(r.url()) })
   await page.goto('/trainer')
   await expect(page.getByTestId('preview-pill')).toHaveText('Preview')
   await expect(page.getByTestId('roadmap-stage')).toHaveCount(3)
-  await expect(page.getByTestId('roadmap-stage').first()).toContainText('Stored practice session and one live turn')
+  await expect(page.getByTestId('candidate')).toHaveCount(3, { timeout: 20_000 })
+  const first = page.getByTestId('candidate').first()
+  await expect(first).toContainText('Drehtechnik Eifel GmbH')
+  await expect(first).toContainText('€254,057')
+  await expect(first).toContainText('above the cost basket')
+  await page.getByTestId('pick-example').click()
   const brief = page.getByTestId('brief-panel')
   await expect(brief).toContainText('€412,387')
   await expect(brief).toContainText('€183,204')
+  await expect(page.getByTestId('history-panel')).toContainText('First order')
   await expect(page.getByTestId('replay-hint')).toBeVisible()
   for (let i = 1; i <= 5; i++) {
     await page.getByTestId('next-turn').click()
     await expect(page.getByTestId('coach-card')).toHaveCount(i)
   }
-  await expect(page.getByTestId('next-turn')).toHaveCount(0)
-  await expect(page.getByTestId('turn').first().getByTestId('supplier-reply')).toContainText('Getriebebau Arnold GmbH, key account manager')
-  await expect(page.getByTestId('live-form')).toBeVisible()
+  await expect(page.getByTestId('chat')).toBeVisible()
   expect(calls).toHaveLength(0)
 })
 
-const cannedTurn = { id: 1, session_id: 424242, turn_no: 6, buyer: 'Our Hamburg payment run can settle within the Skonto period.',
-  supplier: { message: 'Then 3% applies from the next order, with the renewal signed.', concession: 'partial', numbers_used: [] },
-  coach: { assessment: 'ok', note: 'You answered the working-capital argument. Anchor on the total next.', next_fact_id: 'contract_guard', used_fact_ids: ['terms_floor'] } }
-
-test('T6 one live turn (answer routed, no spend): reply and coach card appear, the form locks, Start over reopens it', async ({ page }) => {
-  await page.route('**/rest/v1/rpc/start_live_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424242' }))
-  await page.route('**/functions/v1/trainer-turn', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ turn: cannedTurn }) }))
+test('T5 a recommended case shows its brief, its history and an empty chat', async ({ page }) => {
   await page.goto('/trainer')
-  await page.getByRole('button', { name: 'Show all turns' }).click()
-  const box = page.getByTestId('live-form').getByLabel('Your next message')
-  await expect(page.getByTestId('live-form').getByRole('button', { name: 'Send' })).toBeDisabled()
-  await box.fill(cannedTurn.buyer)
-  await box.press('Enter')
-  const live = page.locator('[data-testid="turn"][data-live]')
-  await expect(live.getByTestId('supplier-reply')).toContainText('Then 3% applies from the next order')
-  await expect(live.getByTestId('coach-card')).toHaveAttribute('data-assessment', 'ok')
-  await expect(page.getByTestId('live-locked')).toHaveText('Preview: one live turn per session.')
-  await expect(page.getByTestId('live-form')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Start over' }).click()
-  await expect(page.getByTestId('live-form')).toBeVisible()
+  await page.getByTestId('candidate').first().click()
+  await expect(page.getByTestId('brief-panel')).toContainText('Index Guard', { timeout: 20_000 })
+  const history = page.getByTestId('history-panel')
+  await expect(history).toContainText('Supplies')
+  await expect(history).toContainText('Not in the data')
+  await expect(page.getByTestId('chat-empty')).toBeVisible()
+  await expect(page.getByTestId('chat')).toContainText('8 turns left')
+  await page.getByTestId('back-to-cases').click()
+  await expect(page.getByTestId('candidate')).toHaveCount(3)
 })
 
-test('T6 a rejected live turn shows the inline error and keeps the form', async ({ page }) => {
-  await page.route('**/rest/v1/rpc/start_live_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424243' }))
+const cannedTurn = (turn_no: number) => ({ id: turn_no, session_id: 424242, turn_no, buyer: 'Our Hamburg payment run can settle within the Skonto period.',
+  supplier: { message: 'Then 3% applies from the next order, with the renewal signed.', concession: 'partial', numbers_used: [] },
+  coach: { assessment: 'ok', note: 'You answered the working-capital argument. Anchor on the total next.', next_fact_id: 'index_guard', used_fact_ids: ['terms_floor'] } })
+
+test('T6 practice chat (answers routed, no spend): turns stack up and the turn counter falls', async ({ page }) => {
+  let n = 0
+  await page.route('**/rest/v1/rpc/start_trainer_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424242' }))
+  await page.route('**/functions/v1/trainer-turn', (r) => { n += 1; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ turn: cannedTurn(n) }) }) })
+  await page.goto('/trainer')
+  await page.getByTestId('candidate').first().click()
+  const box = page.getByTestId('chat-form').getByLabel('Your next message')
+  await expect(page.getByTestId('chat-form').getByRole('button', { name: 'Send' })).toBeDisabled()
+  await box.fill('Your prices run 12.1% above the basket on the articles without a contract.')
+  await box.press('Enter')
+  await expect(page.locator('[data-testid="turn"][data-live]')).toHaveCount(1)
+  await expect(page.getByTestId('chat')).toContainText('7 turns left')
+  await box.fill('We want the correction from the next order.')
+  await box.press('Enter')
+  await expect(page.locator('[data-testid="turn"][data-live]')).toHaveCount(2)
+  await expect(page.getByTestId('coach-card').last()).toHaveAttribute('data-assessment', 'ok')
+})
+
+test('T6 a rejected reply shows the inline error and keeps the message', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/start_trainer_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424243' }))
   await page.route('**/functions/v1/trainer-turn', (r) => r.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: 'rejected', reasons: ['number not in input: €19,200'] }) }))
   await page.goto('/trainer')
-  await page.getByRole('button', { name: 'Show all turns' }).click()
-  const form = page.getByTestId('live-form')
+  await page.getByTestId('candidate').first().click()
+  const form = page.getByTestId('chat-form')
   await form.getByLabel('Your next message').fill('We want a 5% discount.')
   await form.getByRole('button', { name: 'Send' }).click()
   await expect(form.getByTestId('live-error')).toContainText('did not pass the checks')
-  await expect(form.getByTestId('live-error')).toContainText('€19,200')
   await expect(form.getByLabel('Your next message')).toBeEnabled()
 })

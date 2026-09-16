@@ -31,12 +31,6 @@ export const previewAgents: CaseKey[] = rawPreview
   .map((s) => s.trim())
   .filter((s): s is CaseKey => s in AGENTS && !enabledAgents.includes(s as CaseKey))
 
-// The flagship (spec mvp-price-benchmark): shown with the agents in its own card and nav entry, runnable like them,
-// but never among the five strategy cards and never in a total (mvp_cases.preview keeps it out of v_savings_split).
-// The benchmark agent is a preview until it is finished (case-selection slide, Mattis 2026-09-16): no flagship card on the cockpit.
-const rawFlagship = import.meta.env.VITE_FLAGSHIP_AGENT as string | undefined
-export const flagshipAgent: CaseKey | null = rawFlagship && rawFlagship in AGENTS ? (rawFlagship as CaseKey) : null
-
-// Preview surfaces that are not agents (their own page, no run, no findings): shown in the cockpit's preview strip.
+// Preview surfaces that are not agents (their own page, no run, no findings): shown in the preview strip and under Preview in the navigation.
 export interface PreviewPage { key: string; path: string }
 export const previewPages: PreviewPage[] = [{ key: 'trainer', path: '/trainer' }]

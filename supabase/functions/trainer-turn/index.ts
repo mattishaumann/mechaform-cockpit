@@ -1,6 +1,6 @@
 // trainer-turn: one turn of the negotiation trainer (preview). The model plays the supplier and a coach in one forced tool call.
 // The brief is built by rules (v_supplier_brief); the model writes language and may use only numbers from the brief or the
-// buyer's message. Stored sessions are seeded once and replay from the database; a live session takes one turn.
+// buyer's message. Stored sessions are seeded once and replay from the database; a live session runs a capped practice chat.
 // Same harness as draft-action: budget guard, forced schema, post-checks, every call logged with its input and output.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -8,6 +8,7 @@ const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 700
 const BUDGET_USD = 3.5
 const STORED_TURNS = 5
+const LIVE_TURNS_MAX = 8   // a practice chat, capped per session; the budget guard sits on top
 const MESSAGE_MAX_CHARS = 600
 const SUPPLIER_WORDS_MAX = 90
 const PRICE = { input: 1e-6, output: 5e-6, cached: 0.1e-6 }
@@ -23,10 +24,11 @@ The buyer practises a negotiation with one supplier. You play two roles in one a
    capital). Concede in steps: first acknowledge or question, then offer a partial concession and ask for something in return
    (a volume commitment, renewing the contracts before they end on 2026-12-31, payment inside the Skonto period). A partial
    concession is about scope or timing (future orders only, some of the lines, from the next order, with the renewal), never a
-   new amount, year or date. Give a full
+   new amount, year or date: say "from the next order", "with the renewal", "this quarter", never a year such as 2027.
+   Give a full
    concession on a topic only after the buyer has pressed that same topic with its numbers in an earlier turn as well. Vary
    how you open; do not start with thanks. Never invent a number: use only numbers that appear in INPUT or in the buyer's
-   message, or none at all. At most 90 words, plain English, courteous, no em or en dashes, no exclamation marks. Echo every
+   message, or none at all, and never a year or date that is not in INPUT. At most 90 words, plain English, courteous, no em or en dashes, no exclamation marks. Echo every
    number you use in numbers_used with its source.
 2. coach: a demanding procurement negotiation coach speaking to the buyer. Assess the buyer's latest message: strong only when
    it uses a fact from the brief with its number, asks for a concrete outcome and answers the supplier's last argument; weak
@@ -82,7 +84,7 @@ Deno.serve(async (req) => {
   const { data: session } = await admin.from('mvp_trainer_sessions').select('*').eq('id', sessionId).maybeSingle()
   if (!session) return json({ error: 'unknown_session' }, 404)
   const { data: own } = await admin.from('mvp_trainer_turns').select('turn_no,buyer,supplier').eq('session_id', sessionId).order('turn_no')
-  if (session.kind === 'live' && (own ?? []).length >= 1) return json({ error: 'live_turn_used' }, 409)
+  if (session.kind === 'live' && (own ?? []).length >= LIVE_TURNS_MAX) return json({ error: 'live_turns_used', max: LIVE_TURNS_MAX }, 409)
   if (session.kind === 'stored' && (own ?? []).length >= STORED_TURNS) return json({ error: 'stored_session_full' }, 409)
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')

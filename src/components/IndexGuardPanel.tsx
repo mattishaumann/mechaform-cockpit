@@ -8,6 +8,7 @@ import { CategoryVerdict, IndexActionItems } from './IndexActionItems'
 import { useQuery } from '../lib/useQuery'
 import { copy } from '../copy'
 import { Button } from './Button'
+import { Fold } from './Fold'
 import { Pill } from './Pill'
 import { EmptyState, ErrorState, Skeleton } from './States'
 
@@ -22,7 +23,10 @@ function SampleBanner({ sample }: { sample: boolean }) {
         <Pill tone="brand">{sample ? copy.index.samplePill : copy.index.feedPill}</Pill>
         <p className="text-sm font-medium">{sample ? copy.index.sampleTitle : copy.index.feedTitle}</p>
       </div>
-      <p className="mt-2 max-w-prose text-sm text-text-muted">{copy.index.sampleText}</p>
+      {sample && <>
+        <p className="mt-2 max-w-prose text-sm text-text-muted">{copy.index.sampleLead}</p>
+        <div className="mt-2"><Fold summary={copy.index.sampleMore}><p className="max-w-prose text-text-muted">{copy.index.sampleText}</p></Fold></div>
+      </>}
     </div>
   )
 }

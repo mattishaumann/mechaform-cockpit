@@ -7,7 +7,7 @@ test('P5 scan results: recommendation, savings and next step per card, details f
   await page.goto(PAGE)
   await expect(page.getByTestId('benchmark-dev-banner')).toContainText('very much in development')
   const head = page.getByTestId('benchmark-headline')
-  await expect(head).toContainText('Flagship')
+  await expect(head).toContainText('In development')
   await expect(head).toContainText('Moonshot')
   await expect(head.getByTestId('benchmark-confidence')).toContainText('Low confidence')
   await expect(page.getByTestId('benchmark-range')).toHaveText(/Potential savings:\s*€1\.8M – €3\.0M \/ year\s*\(sample of 4 articles\)/)
@@ -56,22 +56,23 @@ test('P6 method folds open: four steps, today (sample) against at scale', async 
   await expect(steps.nth(3)).toContainText('RFQ')
 })
 
-test('P7 cockpit: the scan never moves the headline, flagship card shows the range, run log shows no single figure', async ({ page }) => {
+test('P7 cockpit: the benchmark sits in the preview strip and never moves the headline', async ({ page }) => {
   await page.goto('/?from=2026-01-01&to=2026-12-31')
   const headline = page.getByTestId('hard-savings')
   const before = await headline.textContent()
   expect(before).toMatch(/^€[\d,]+$/)
   await expect(page.getByTestId('benchmark-note')).toContainText('potentially a lot')
   await expect(page.getByTestId('benchmark-note')).toContainText('Not counted')
-  // structure from the case-selection slide (Mattis, 2026-09-16): the same card now sits inside the preview strip
-  const card = page.getByTestId('flagship-card-price_benchmark')
+  const card = page.getByTestId('preview-card-price_benchmark')
   await expect(card).toContainText('Low confidence')
-  await expect(card.getByTestId('flagship-value')).toHaveText('€1.8M – €3.0M / year')
-  await expect(page.getByTestId('agent-card-price_benchmark')).toHaveCount(0)   // never a strategy card, whatever the card count is
-  await expect(page.getByTestId('nav-preview-price_benchmark')).toBeVisible()   // under Preview, not marked as flagship
+  await expect(card.getByTestId('preview-value')).toContainText('€1.8M – €3.0M / year, not in any total')
+  await expect(page.getByTestId('agent-card-price_benchmark')).toHaveCount(0)   // never a strategy card
+  await expect(page.getByTestId('nav-preview-price_benchmark')).toBeVisible()
 
-  await card.getByTestId('flagship-run-button').click()
-  await expect(card.getByTestId('flagship-run-button')).toBeEnabled({ timeout: 30_000 })
+  await page.goto(PAGE)
+  await page.getByTestId('run-agent').click()
+  await expect(page.getByTestId('run-agent')).toBeEnabled({ timeout: 60_000 })
+  await page.goto('/?from=2026-01-01&to=2026-12-31')
   await expect(headline).toHaveText(before!)   // the scan counts in no total
   const log = page.getByTestId('run-log')
   await expect(log.locator('li', { hasText: 'External Price Benchmark' }).first()).toContainText('Range, low confidence', { timeout: 15_000 })
