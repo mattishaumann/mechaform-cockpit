@@ -116,6 +116,7 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
+  const [confirmReset, setConfirmReset] = useState(false)
   const end = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
   // The suggested opening is long; the box grows to fit it rather than making him scroll inside a small field.
@@ -123,6 +124,7 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
   useEffect(() => { if (turns.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [turns.length])
 
   const left = CHAT_MAX - turns.length
+  const reset = () => { setTurns([]); setSessionId(null); setError(null); setPending(null); setMessage(opening ?? ''); setConfirmReset(false) }
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     const text = message.trim()
@@ -149,8 +151,20 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
     <section data-testid="chat" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className={label}>{copy.trainer.chat}</p>
-        <p className="text-xs text-text-muted">{left > 0 ? copy.trainer.turnsLeft(left) : copy.trainer.lockedChat}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs text-text-muted">{left > 0 ? copy.trainer.turnsLeft(left) : copy.trainer.lockedChat}</p>
+          <Button variant="ghost" data-testid="start-over" disabled={busy || (turns.length === 0 && !error)} onClick={() => setConfirmReset(true)}>{copy.trainer.startOver}</Button>
+        </div>
       </div>
+      {confirmReset && (
+        <div role="alertdialog" aria-label={copy.trainer.startOver} data-testid="start-over-confirm" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-strong bg-surface p-4">
+          <p className="max-w-prose text-sm">{copy.trainer.startOverConfirm}</p>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setConfirmReset(false)}>{copy.trainer.startOverCancel}</Button>
+            <Button variant="primary" data-testid="start-over-yes" onClick={reset}>{copy.trainer.startOverYes}</Button>
+          </div>
+        </div>
+      )}
       <p className="text-xs text-text-muted">{copy.trainer.chatNote(CHAT_MAX)}</p>
       {turns.length === 0 && !pending && <p data-testid="chat-empty" className="text-sm text-text-muted">{opening ? copy.trainer.suggested : copy.trainer.chatEmpty}</p>}
       {turns.map((t) => <TurnView key={t.id} turn={t} supplier={supplier} facts={facts} live />)}

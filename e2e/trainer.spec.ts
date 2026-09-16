@@ -65,6 +65,29 @@ test('T6 practice chat (answers routed, no spend): turns stack up and the turn c
   await expect(page.getByTestId('coach-card').last()).toHaveAttribute('data-assessment', 'ok')
 })
 
+test('T6 start over clears the practice conversation and opens a fresh session', async ({ page }) => {
+  const sessions: string[] = []
+  await page.route('**/rest/v1/rpc/start_trainer_session', (r) => { sessions.push(r.request().url()); return r.fulfill({ status: 200, contentType: 'application/json', body: String(424250 + sessions.length) }) })
+  await page.route('**/functions/v1/trainer-turn', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ turn: cannedTurn(1) }) }))
+  await page.goto('/trainer')
+  await page.getByTestId('candidate').first().click()
+  const box = page.getByTestId('chat-form').getByLabel('Your next message')
+  await expect(page.getByTestId('start-over')).toBeDisabled()   // nothing to throw away yet
+  await box.fill('Your prices run above the basket on the articles without a contract.')
+  await box.press('Enter')
+  await expect(page.locator('[data-testid="turn"][data-live]')).toHaveCount(1)
+  await page.getByTestId('start-over').click()
+  await expect(page.getByTestId('start-over-confirm')).toContainText('stored example session stays')
+  await page.getByTestId('start-over-yes').click()
+  await expect(page.locator('[data-testid="turn"][data-live]')).toHaveCount(0)
+  await expect(page.getByTestId('chat')).toContainText('8 turns left')
+  await expect(box).toHaveValue(/Thank you for making time/)   // the suggested opening is back
+  await box.fill('Second run, first message.')
+  await box.press('Enter')
+  await expect(page.locator('[data-testid="turn"][data-live]')).toHaveCount(1)
+  expect(sessions).toHaveLength(2)   // the next send opened a new session rather than continuing the old one
+})
+
 test('T6 while the supplier answers, the typing indicator says who is answering and then goes', async ({ page }) => {
   await page.route('**/rest/v1/rpc/start_trainer_session', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '424244' }))
   await page.route('**/functions/v1/trainer-turn', async (r) => {

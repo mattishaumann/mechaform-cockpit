@@ -369,6 +369,9 @@ export const copy = {
     chatNote: (n: number) => `The model answers as the supplier and coaches you, at most ${n} turns per session.`,
     chatEmpty: 'Open with your first message. Use a fact from the brief with its number and ask for a concrete outcome.',
     turnsLeft: (n: number) => `${n} turns left`,
+    startOverConfirm: 'Clear this practice conversation and open a fresh one? The stored example session stays as it is.',
+    startOverYes: 'Yes, clear it',
+    startOverCancel: 'Keep it',
     lockedChat: 'This practice chat is full. Start over for a fresh one.',
   },
   register: {
