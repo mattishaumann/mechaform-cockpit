@@ -119,6 +119,12 @@ export const copy = {
     previewOpen: 'Open Index Guard',
     previewValue: (v: string, n: string) => `${v} above the index band on ${n} order lines in this period`,
     previewNotRun: 'Not run for this period yet.',
+    previewPageText: {
+      trainer: 'Practises a negotiation with a supplier on MechaForm data: a language model plays the supplier and a coach. One stored session and one live turn.',
+    } as Record<string, string>,
+    previewPageName: { trainer: 'Negotiation trainer' } as Record<string, string>,
+    previewOpenPage: 'Open',
+
   },
   charts: {
     contracts: 'Contracts behind the findings',

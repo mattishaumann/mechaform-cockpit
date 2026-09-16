@@ -37,3 +37,7 @@ export const previewAgents: CaseKey[] = rawPreview
 // but never among the five strategy cards and never in a total (mvp_cases.preview keeps it out of v_savings_split).
 export const flagshipAgent: CaseKey | null = ((import.meta.env.VITE_FLAGSHIP_AGENT as string | undefined) ?? 'price_benchmark') in AGENTS
   ? (((import.meta.env.VITE_FLAGSHIP_AGENT as string | undefined) ?? 'price_benchmark') as CaseKey) : null
+
+// Preview surfaces that are not agents (their own page, no run, no findings): shown in the cockpit's preview strip.
+export interface PreviewPage { key: string; path: string }
+export const previewPages: PreviewPage[] = [{ key: 'trainer', path: '/trainer' }]

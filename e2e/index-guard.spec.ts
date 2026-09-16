@@ -51,3 +51,10 @@ test('I13 category verdict: negotiate for castings, watch below the tolerance', 
   await expect(verdict).toHaveAttribute('data-verdict', 'watch')
   await expect(verdict).toContainText('unter der Toleranz')
 })
+
+test('I14 preview strip carries the non-agent preview pages too', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('preview-card-trainer')).toContainText('Negotiation trainer')
+  await page.getByTestId('preview-card-trainer').getByRole('link', { name: 'Open' }).click()
+  await expect(page).toHaveURL(/\/trainer/)
+})
