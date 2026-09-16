@@ -10,10 +10,9 @@ test('C11 enabling a third agent by configuration adds its card and raises the h
   await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(3)   // the headline is R13 in spec mvp-recommendations
 })
 
-test('L14 all agents by configuration show the gross sum', async ({ page }) => {
-  test.skip(process.env.VITE_ENABLED_AGENTS !== 'contract_guard,tier_guard,terms_floor,preferred_steering', 'needs all four agents enabled')
+test('L14 the shown agents give the gross sum', async ({ page }) => {
+  test.skip(process.env.VITE_ENABLED_AGENTS !== 'contract_guard,tier_guard,terms_floor', 'needs the three agents enabled')
   await page.goto('/')
-  await expect(page.getByTestId('agent-card-preferred_steering')).toBeVisible()
-  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(4)
-  await expect(page.getByTestId('gross')).toContainText('€4,188,488')   // the row-level dedup line was replaced by R13 in spec mvp-recommendations
+  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(3)
+  await expect(page.getByTestId('gross')).toContainText('€2,548,687')   // the row-level dedup line was replaced by R13 in spec mvp-recommendations
 })

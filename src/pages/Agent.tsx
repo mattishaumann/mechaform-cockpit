@@ -9,7 +9,6 @@ import { indexLayerColumns } from '../lib/indexGuard'
 import { Pill } from '../components/Pill'
 import { columns, RegisterTable, type Column } from '../components/RegisterTable'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
-import { ComparisonCards } from '../components/ComparisonCards'
 import { ContractTable } from '../components/ContractTable'
 import { TermsBridge } from '../components/TermsBridge'
 import { TierYearChart, type TierYear } from '../components/TierYearChart'
@@ -28,7 +27,6 @@ const layerColumns: Record<string, Column[]> = {
   'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap, columns.recommendation, columns.status],
   'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap, columns.recommendation, columns.status],
   'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
-  'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
   ...indexLayerColumns,   // preview agent Index Guard
 }
 
@@ -68,13 +66,9 @@ export function Agent() {
     const layerRuns = layers.map((l) => runs.find((r) => r.case_name === l.key)).filter((r): r is RunRow => Boolean(r))
     const main = layerRuns[0]
     // the page's one chart, read for the main run
-    const chart: { contracts?: ContractRow[]; bridge?: BridgeRow | null; top?: RegisterRow[]; names?: Awaited<ReturnType<typeof getNames>> } = {}
+    const chart: { contracts?: ContractRow[]; bridge?: BridgeRow | null } = {}
     if (main && config?.chart === 'contract_table') chart.contracts = await getContractTable(main.id)
     if (main && config?.chart === 'bridge') chart.bridge = await getTermsBridge(main.id)
-    if (main && config?.chart === 'comparison_cards') {
-      chart.top = (await getRegister(main.id, 0, 3)).rows
-      chart.names = await getNames([...new Set(chart.top.map((r) => r.supplier_no).filter((x): x is number => x != null))], [...new Set(chart.top.map((r) => r.article_no).filter((x): x is number => x != null))])
-    }
     // thresholds shown in the explanation: the agent's own, plus the due days its tasks use
     const due = key === 'contract_guard' || key === 'tier_guard' ? ['due_days_po_correction', 'due_days_task'] : ['due_days_task']
     const params = (await getConfig()).filter((c) => c.case_key === key || due.includes(c.key))
@@ -99,9 +93,9 @@ export function Agent() {
           <p data-testid="agent-summary" className="mt-1 max-w-prose text-text-muted">{row.summary}</p>
           <p className="mt-1 text-sm text-text-muted">{periodLabel(period)}</p>
         </div>
-        <Button variant="primary" data-testid="run-agent" loading={running} onClick={run}>{copy.agent.run}</Button>
+        <Button variant="primary" data-testid="run-agent" loading={running} onClick={run}>{config.chart === 'benchmark_cards' ? copy.benchmark.runScan : copy.agent.run}</Button>
       </div>
-      {flagship && <div data-testid="agent-chart" className="mt-6"><PriceBenchmarkPanel runId={main?.id ?? null} /></div>}
+      {flagship && <div data-testid="agent-chart" className="mt-6"><PriceBenchmarkPanel runId={main?.id ?? null} finishedAt={main?.finished_at ?? null} /></div>}
       {!flagship && <>
       <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-border bg-surface p-4"><dt className="font-mono text-xs uppercase tracking-widest text-text-muted">{copy.table.gap}</dt><dd data-testid="kpi-gap" data-tabular className="mt-1 text-3xl font-semibold tracking-tight text-brand">{main ? formatEur(main.total) : copy.cockpit.notRun}</dd></div>
@@ -113,7 +107,6 @@ export function Agent() {
         {config.chart === 'tier_columns' && Boolean(stats.tier_share_by_year) && <TierYearChart data={stats.tier_share_by_year as TierYear[]} />}
         {main && config.chart === 'contract_table' && <ContractTable rows={chart.contracts ?? []} total={main.total} />}
         {main && config.chart === 'bridge' && <TermsBridge data={chart.bridge ?? null} rate={cfgValue(params, 'financing_rate')} day={cfgValue(params, 'skonto_days')} />}
-        {main && config.chart === 'comparison_cards' && <ComparisonCards rows={chart.top ?? []} names={chart.names ?? { suppliers: {}, articles: {} }} onRow={setSelected} />}
         {config.chart === 'index_basket' && <IndexGuardPanel lineRun={main ?? null} contractsRun={layerRuns[1] ?? null} onOpen={setSelected} />}
       </div>
       <HowPanel row={row} params={params} />
