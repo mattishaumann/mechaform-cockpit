@@ -18,7 +18,7 @@ export const copy = {
     openTasks: (n: number) => `${n} open ${n === 1 ? 'task' : 'tasks'}`,
     switchError: 'Not saved:',
     offNote: 'Switched off: left out of runs and the headline.',
-    subtitle: 'Five rule agents read the MechaForm order history. Every finding is volume times price gap and ends in a recommendation: who acts, internally or with the supplier.',
+    subtitle: 'Rule agents read the MechaForm order history. Every finding is volume times price gap and ends in a recommendation: who acts, internally or with the supplier. Preview agents sit apart and count in no total.',
     headlineLabel: 'Identified by enabled agents',
     keptApart: 'Kept apart, not savings',
     contractCliff: 'Spend that loses its contract ceiling on 2026-12-31',
