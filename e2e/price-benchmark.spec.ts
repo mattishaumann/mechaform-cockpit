@@ -63,11 +63,12 @@ test('P7 cockpit: the scan never moves the headline, flagship card shows the ran
   expect(before).toMatch(/^€[\d,]+$/)
   await expect(page.getByTestId('benchmark-note')).toContainText('potentially a lot')
   await expect(page.getByTestId('benchmark-note')).toContainText('Not counted')
+  // structure from the case-selection slide (Mattis, 2026-09-16): the same card now sits inside the preview strip
   const card = page.getByTestId('flagship-card-price_benchmark')
   await expect(card).toContainText('Low confidence')
   await expect(card.getByTestId('flagship-value')).toHaveText('€1.8M – €3.0M / year')
   await expect(page.getByTestId('agent-card-price_benchmark')).toHaveCount(0)   // never a strategy card, whatever the card count is
-  await expect(page.getByTestId('nav-flagship')).toBeVisible()
+  await expect(page.getByTestId('nav-preview-price_benchmark')).toBeVisible()   // under Preview, not marked as flagship
 
   await card.getByTestId('flagship-run-button').click()
   await expect(card.getByTestId('flagship-run-button')).toBeEnabled({ timeout: 30_000 })

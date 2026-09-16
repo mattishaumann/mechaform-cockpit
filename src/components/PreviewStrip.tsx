@@ -1,18 +1,22 @@
 import { Link } from 'react-router-dom'
 import type { CaseRow, RunRow } from '../lib/data'
+import type { Period } from '../lib/period'
+import { FlagshipCard } from './FlagshipCard'
 import { previewAgents, previewPages } from '../lib/agents'
 import { formatEur, formatInt } from '../lib/format'
 import { copy } from '../copy'
 import { Pill } from './Pill'
 
 // Preview agents sit under the strategy cards: visible and runnable, never counted in the totals or among the five cards.
-export function PreviewStrip({ cases, runs, search }: { cases: CaseRow[]; runs: RunRow[]; search: string }) {
+export function PreviewStrip({ cases, runs, search, period, onRun }: { cases: CaseRow[]; runs: RunRow[]; search: string; period: Period; onRun: () => void }) {
   const rows = previewAgents.map((k) => cases.find((c) => c.case_key === k)).filter((c): c is CaseRow => Boolean(c))
   if (rows.length === 0 && previewPages.length === 0) return null
   return (
     <div className="mt-6 space-y-3">
       {rows.map((row) => {
         const run = runs.find((r) => r.case_name === row.name)
+        // the benchmark keeps its own richer card (owned by the benchmark spec), it just sits in the preview section now
+        if (row.case_key === 'price_benchmark') return <FlagshipCard key={row.case_key} row={row} runs={runs} period={period} search={search} onRun={onRun} />
         return (
           <article key={row.case_key} data-testid={`preview-card-${row.case_key}`} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-dashed border-border-strong bg-surface p-5">
             <div className="max-w-prose">
