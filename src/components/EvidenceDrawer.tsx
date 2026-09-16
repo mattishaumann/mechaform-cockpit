@@ -10,6 +10,7 @@ import { FindingActions } from './FindingActions'
 import { DraftPanel } from './DraftPanel'
 import { Pill } from './Pill'
 import { RecommendationCard } from './RecommendationCard'
+import { Fold } from './Fold'
 import { ScenarioCard } from './ScenarioCard'
 import { ErrorState, Skeleton } from './States'
 
@@ -53,9 +54,9 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
       </div>
       <div className="border-b border-border px-6 py-3"><FindingActions row={row} onChanged={onStatus} /></div>
       <div className="overflow-auto px-6 py-4">
-        <ScenarioCard key={row.id} row={row} onStatus={onStatus} onDraft={() => setDraftOpen(true)} onTaskCreated={() => setRecoKey((k) => k + 1)} />
-        <div className="mt-6"><RecommendationCard key={`${row.id}-${recoKey}`} row={row} onStatus={onStatus} draftOpen={draftOpen} onDraft={() => setDraftOpen(true)} /></div>
-        <h3 className="mt-6 font-mono text-xs uppercase tracking-widest text-text-muted">{copy.draft.evidence}</h3>
+        {/* UI experiment "reduced": the recommendation leads, the evidence follows, further scenarios are one click away */}
+        <RecommendationCard key={`${row.id}-${recoKey}`} row={row} onStatus={onStatus} draftOpen={draftOpen} onDraft={() => setDraftOpen(true)} />
+        <h3 className="mt-8 font-mono text-xs uppercase tracking-widest text-text-muted">{copy.draft.evidence}</h3>
         {q.error && <ErrorState text={copy.cockpit.error} detail={q.error} />}
         {q.loading && <Skeleton lines={6} />}
         {!q.loading && !q.error && lines.length === 0 && <p className="mt-2 text-sm text-text-muted">{copy.agent.noLines}</p>}
@@ -90,6 +91,11 @@ export function EvidenceDrawer({ row, period, onClose, onStatus }: { row: Regist
           </div>
         )}
         {draftOpen && row.recommendation?.external && !q.loading && !q.error && <div ref={draftRef}><DraftPanel row={row} lines={lines} contractNo={contractNo} onStatus={onStatus} /></div>}
+        <div className="mt-8">
+          <Fold summary={copy.reduced.scenarios} testId="drawer-scenarios">
+            <ScenarioCard key={row.id} row={row} onStatus={onStatus} onDraft={() => setDraftOpen(true)} onTaskCreated={() => setRecoKey((k) => k + 1)} />
+          </Fold>
+        </div>
       </div>
     </aside>
   )
