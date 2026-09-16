@@ -74,12 +74,6 @@ export async function getTopSuppliers(runId: number, limit: number): Promise<Top
   return (data ?? []).map((r) => ({ ...r, findings: toNumber(r.findings), articles: toNumber(r.articles), gap_eur: toNumber(r.gap_eur), deviation: toNumber(r.deviation), contract_count: toNumber(r.contract_count) })) as TopSupplier[]
 }
 
-export async function getSupplierCount(runId: number): Promise<number> {
-  const { count, error } = await supabase.from('v_index_guard_top_suppliers').select('supplier_no', { count: 'exact', head: true }).eq('run_id', runId)
-  fail(error)
-  return count ?? 0
-}
-
 export async function getFindingsByIds(ids: number[]): Promise<RegisterRow[]> {
   if (ids.length === 0) return []
   const { data, error } = await supabase.from('mvp_register').select('*').in('id', ids)

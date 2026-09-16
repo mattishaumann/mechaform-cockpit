@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { getCategorySummary, getFindingsByIds, getIndexData, getIndexSummary, getSupplierCount, getTopSuppliers, type BasketWeight, type CategoryRow, type IndexDefinition, type IndexPoint, type IndexSummaryRow } from '../lib/indexGuard'
+import { getCategorySummary, getFindingsByIds, getIndexData, getIndexSummary, getTopSuppliers, type BasketWeight, type CategoryRow, type IndexDefinition, type IndexPoint, type IndexSummaryRow } from '../lib/indexGuard'
 import { getConfig, type RegisterRow, type RunRow } from '../lib/data'
 import { formatEur, toNumber } from '../lib/format'
 import { CategoryVerdict, IndexActionItems } from './IndexActionItems'
@@ -104,9 +104,8 @@ export function IndexGuardPanel({ lineRun, contractsRun, onOpen }: { lineRun: Ru
     ])
     const suppliers = runId ? await getTopSuppliers(runId, ACTIONS) : []
     const actions = await getFindingsByIds(suppliers.map((s) => s.top_register_id))
-    const supplierCount = runId ? await getSupplierCount(runId) : 0
     const tolerance = toNumber(config.find((c) => c.key === 'index_tolerance')?.value ?? 0.03)
-    return { summary, ...idx, categories, suppliers, actions, supplierCount, tolerance }
+    return { summary, ...idx, categories, suppliers, actions, tolerance }
   }, [runId, actionRunId])
   const categories = useMemo(() => {
     const by = new Map<string, { name: string; spend: number; excess: number }>()
@@ -128,7 +127,8 @@ export function IndexGuardPanel({ lineRun, contractsRun, onOpen }: { lineRun: Ru
   const cat = categories.find((c) => c.no === current)
   const shownGap = q.data.suppliers.reduce((a, r) => a + Number(r.gap_eur), 0)
   const totalGap = Number(lineRun?.total ?? 0)   // the supplier list reads the order-line layer
-  const restCount = Math.max(0, q.data.supplierCount - q.data.suppliers.length)
+  const shownFindings = q.data.suppliers.reduce((a, r) => a + Number(r.findings), 0)
+  const restCount = Math.max(0, Number(lineRun?.rows ?? 0) - shownFindings)   // order positions outside the top three suppliers
   const verdictRow = q.data.categories.find((c) => c.category_no === current) ?? null
   return (
     <div className="space-y-4">

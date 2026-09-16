@@ -45,7 +45,7 @@ export function IndexActionItems({ rows, findings, restCount, restGap, onOpen }:
           })}
         </ol>
       )}
-      {restCount > 0 && <p data-testid="index-action-rest" className="mt-3 border-t border-border pt-3 text-sm text-text-muted">{copy.index.actionRestSuppliers(formatInt(restCount), formatEur(restGap))}</p>}
+      {restCount > 0 && <p data-testid="index-action-rest" className="mt-3 border-t border-border pt-3 text-sm text-text-muted">{copy.index.actionRest(formatInt(restCount), formatEur(restGap))}</p>}
     </section>
   )
 }

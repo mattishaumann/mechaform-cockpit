@@ -109,7 +109,6 @@ export const copy = {
     supplierArticle: (a: string) => `Größte Abweichung: ${a}`,
     supplierContracts: (n: string, c: string) => `${n} Vertragspositionen betroffen, größte: Vertrag ${c}`,
     trainLink: 'Im Verhandlungstrainer üben',
-    actionRestSuppliers: (n: string, gap: string) => `Weitere ${n} Lieferanten über dem Band, zusammen ${gap}.`,
     actionContract: (c: string) => `Preisgespräch zu Vertrag ${c}`,
     actionNoContract: (a: string) => `Preisgespräch zu Artikel ${a}`,
     actionNumbers: (paid: string, idx: string, dev: string, gap: string, vol: string) => `Bezahlt ${paid} gegen Indexpreis ${idx} (${dev} darüber); ${gap} über dem Toleranzband auf ${vol} Stk.`,
