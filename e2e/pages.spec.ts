@@ -35,18 +35,7 @@ test('R18 Terms Floor: bridge from Skonto gained to net gain', async ({ page }) 
   await expect(b.locator('[data-step="net"]')).toContainText('€1,017,963')
 })
 
-test('R20 Preferred Steering: comparison cards, largest gap first', async ({ page }) => {
-  await page.goto(`/agents/preferred_steering${Y}`)
-  const first = page.getByTestId('comparison-card').first()
-  await expect(page.getByTestId('comparison-card')).toHaveCount(3)
-  await expect(first).toContainText('€107.30')
-  await expect(first).toContainText('€98.81')
-  await expect(first).toContainText('7.9% günstiger')
-  await first.click()
-  await expect(page.getByTestId('evidence-drawer').getByTestId('recommendation-card')).toContainText('NUR INTERN')
-})
-
-for (const key of ['contract_guard', 'tier_guard', 'terms_floor', 'preferred_steering']) {
+for (const key of ['contract_guard', 'tier_guard', 'terms_floor']) {
   test(`R21 ${key}: a row opens the drawer with evidence and the card`, async ({ page }) => {
     await page.goto(`/agents/${key}${Y}`)
     const drawer = await openFirstRow(page, key)

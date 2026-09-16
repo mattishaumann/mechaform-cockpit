@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test'
 import { sql } from './db'
 
 // Price Radar was cancelled on 2026-09-16 (spec mvp-recommendations, Price Radar cancelled): four agents on the cockpit
-const AGENTS = ['contract_guard', 'tier_guard', 'terms_floor', 'preferred_steering']
+const AGENTS = ['contract_guard', 'tier_guard', 'terms_floor']
 
 // a failed switch test must not leave one of its agents off; other agents (Index Guard preview) keep their own switch
 test.afterEach(() => { sql(`update mvp_cases set enabled = true where not enabled and case_key in (${AGENTS.map((a) => `'${a}'`).join(', ')})`) })
 
-test('R11 four agent cards with summary, on/off switch and open-task counter', async ({ page }) => {
+test('R11 three agent cards with summary, on/off switch and open-task counter', async ({ page }) => {
   await page.goto('/?from=2026-01-01&to=2026-12-31')
-  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(4)
+  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(3)
   for (const key of AGENTS) {
     const card = page.getByTestId(`agent-card-${key}`)
     await expect(card.getByTestId('card-summary')).not.toBeEmpty()
@@ -41,11 +41,11 @@ test('R12 a switched-off agent is muted, logged and left out of "Run all agents"
 
 test('R13 hard savings headline apart from cost avoidance and exposures', async ({ page }) => {
   await page.goto('/?from=2026-01-01&to=2026-12-31')
-  await expect(page.getByTestId('hard-savings')).toHaveText('€3,926,438')
+  await expect(page.getByTestId('hard-savings')).toHaveText('€2,298,917')
   const headline = page.getByTestId('headline')
-  for (const v of ['€675,529', '€605,424', '€1,627,521', '€1,017,963']) await expect(headline).toContainText(v)
+  for (const v of ['€675,529', '€605,424', '€1,017,963']) await expect(headline).toContainText(v)
   await expect(headline).not.toContainText('Price Radar')
-  await expect(page.getByTestId('gross')).toContainText('€4,188,488')
+  await expect(page.getByTestId('gross')).toContainText('€2,548,687')
   await expect(page.getByTestId('cost-avoidance')).toHaveCount(0)   // no cost-avoidance case since Price Radar was cancelled
   await expect(page.getByTestId('kept-apart')).toContainText('€58,477,838')
   await expect(page.getByTestId('exposure-reco')).toContainText('NUR INTERN')

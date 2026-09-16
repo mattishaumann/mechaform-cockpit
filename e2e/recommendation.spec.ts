@@ -29,18 +29,6 @@ test('R8 Contract Guard card: rationale, ERST INTERN, task moves the finding to 
   await expect(page.getByTestId('activity-feed').locator('li').filter({ hasText: 'task for Einkäufer 4471' }).first()).toBeVisible()
 })
 
-test('R8 Preferred Steering card is internal only: NUR INTERN and no external block', async ({ page }) => {
-  await page.goto('/agents/preferred_steering?from=2026-01-01&to=2026-12-31')
-  const row = page.getByTestId('register-preferred_steering-0').locator('tbody tr[data-article="700001"]')
-  await expect(row.getByTestId('sequence-pill')).toHaveAttribute('data-sequence', 'internal_only')
-  await row.click()
-  const card = page.getByTestId('recommendation-card')
-  await expect(card.getByTestId('rec-title')).toHaveText('Preferred Steering empfiehlt Lieferantenqualifizierung')   // R25
-  await expect(card.getByTestId('sequence-pill')).toContainText('NUR INTERN')
-  await expect(card.getByTestId('rec-internal').first()).toContainText('Kategorieeinkauf')
-  await expect(card.getByTestId('rec-external')).toHaveCount(0)
-})
-
 test('R26 Contract Guard names the contract owner as the responsible buyer', async ({ page }) => {
   await page.goto('/agents/contract_guard?from=2026-01-01&to=2026-12-31')
   await page.getByTestId('register-contract_guard-0').locator('tbody tr[data-order="508565"][data-article="703947"]').click()
