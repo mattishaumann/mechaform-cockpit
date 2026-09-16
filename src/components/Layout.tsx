@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Brand } from './Brand'
 import { PeriodSelector } from './PeriodSelector'
 import { copy } from '../copy'
-import { AGENTS, enabledAgents, flagshipAgent, previewAgents } from '../lib/agents'
+import { AGENTS, enabledAgents, flagshipAgent, previewAgents, previewPages } from '../lib/agents'
 
 const link = 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg focus-visible:outline-none block whitespace-nowrap rounded-md px-3 py-2 text-sm text-text-muted no-underline transition-colors duration-fast hover:bg-surface-hover hover:text-text aria-[current=page]:bg-surface aria-[current=page]:text-text aria-[current=page]:font-medium md:whitespace-normal'
 
@@ -25,7 +25,6 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
         <nav aria-label="Main" className="-mx-4 flex shrink-0 gap-1 overflow-x-auto px-4 md:mx-0 md:w-52 md:flex-col md:overflow-visible md:px-0">
           <NavLink to={{ pathname: '/', search: window.location.search }} end className={link}>{copy.cockpit.title}</NavLink>
           <NavLink to={{ pathname: '/register', search: window.location.search }} className={link}>{copy.register.title}</NavLink>
-          <NavLink data-testid="nav-trainer" to={{ pathname: '/trainer', search: window.location.search }} className={link}>{copy.trainer.nav}</NavLink>
           <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">Agents</p>
           {flagshipAgent && (
             <NavLink data-testid="nav-flagship" to={{ pathname: `/agents/${flagshipAgent}`, search: window.location.search }} className={link}>
@@ -35,9 +34,12 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
           {enabledAgents.map((k) => (
             <NavLink key={k} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
           ))}
-          {previewAgents.length > 0 && <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">{copy.index.previewNav}</p>}
+          {(previewAgents.length > 0 || previewPages.length > 0) && <p className="hidden px-3 pt-4 font-mono text-xs uppercase tracking-widest text-text-muted md:block">{copy.index.previewNav}</p>}
           {previewAgents.map((k) => (
             <NavLink key={k} data-testid={`nav-preview-${k}`} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>
+          ))}
+          {previewPages.map((p) => (
+            <NavLink key={p.key} data-testid={`nav-${p.key}`} to={{ pathname: p.path, search: window.location.search }} className={link}>{copy.index.previewPageName[p.key] ?? p.key}</NavLink>
           ))}
         </nav>
         <main className="min-w-0 flex-1">{children}</main>

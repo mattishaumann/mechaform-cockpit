@@ -117,6 +117,8 @@ export const copy = {
     previewNav: 'Preview',
     previewText: 'Checks every order and contract price against a cost index basket for its category. Runs on sample index data, not counted in any total.',
     previewOpen: 'Open Index Guard',
+    previewOpenAgent: (name: string) => `Open ${name}`,
+    previewFindings: (n: string) => `${n} findings in this period. Values stay out of every total.`,
     previewValue: (v: string, n: string) => `${v} above the index band on ${n} order lines in this period`,
     previewNotRun: 'Not run for this period yet.',
     previewPageText: {
