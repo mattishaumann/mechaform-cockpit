@@ -119,29 +119,34 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
   const [confirmReset, setConfirmReset] = useState(false)
   const end = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
+  const run = useRef(0)   // a refused turn puts its text back, unless "start over" has since cleared the conversation
   // The suggested opening is long; the box grows to fit it rather than making him scroll inside a small field.
   useEffect(() => { const el = box.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` }, [message])
   useEffect(() => { if (turns.length) end.current?.scrollIntoView({ block: 'nearest' }) }, [turns.length])
 
   const left = CHAT_MAX - turns.length
-  const reset = () => { setTurns([]); setSessionId(null); setError(null); setPending(null); setMessage(opening ?? ''); setConfirmReset(false) }
+  const reset = () => { run.current++; setTurns([]); setSessionId(null); setError(null); setPending(null); setMessage(opening ?? ''); setConfirmReset(false) }
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     const text = message.trim()
     if (!text || busy || left <= 0) return
-    setBusy(true); setError(null); setPending(text)
+    const mine = ++run.current
+    // the message is echoed above while the supplier answers, so it does not sit in the box as well
+    setBusy(true); setError(null); setPending(text); setMessage('')
     try {
       const id = sessionId ?? (storedId ? await startLiveSession(storedId) : await startTrainerSession(supplierNo))
       if (!sessionId) setSessionId(id)
       const res = await sendTurn(id, text)
-      if (res.turn) { setTurns((t) => [...t, res.turn as Turn]); setMessage('') }
+      if (res.turn) setTurns((t) => [...t, res.turn as Turn])
       else if (res.error === 'budget_exhausted') setError(copy.trainer.budget)
       else if (res.error === 'missing_api_key') setError(copy.trainer.missingKey)
       else if (res.error === 'live_turns_used') setError(copy.trainer.liveTurnsUsed)
       else if (res.error === 'rejected') setError(`${copy.trainer.rejected} ${(res.reasons ?? []).join('; ')}`)
       else setError(`${copy.trainer.failed} ${res.error ?? 'unknown'}`)
+      if (!res.turn && run.current === mine) setMessage(text)   // nothing was said: he keeps what he wrote
     } catch (err) {
       setError(`${copy.trainer.failed} ${(err as Error).message}`)
+      if (run.current === mine) setMessage(text)
     } finally {
       setBusy(false); setPending(null)
     }
