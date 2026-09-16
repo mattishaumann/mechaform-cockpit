@@ -123,7 +123,6 @@ export async function getRegisterTotals(period: Period, agents: string[], role: 
 
 export interface ContractRow { contract_no: string; supplier_no: number; supplier_name: string; article_no: number; description: string; contract_price: number; paid: number; lines: number; volume: number; gap: number }
 export interface BridgeRow { gross: number; financing: number; net: number; suppliers: number }
-export interface IndexRow { year: number; articles_index: number; path_index: number; index_rate: number }
 
 // Chart data per agent page, read from views over the run's own findings.
 export async function getContractTable(runId: number): Promise<ContractRow[]> {
@@ -136,12 +135,6 @@ export async function getTermsBridge(runId: number): Promise<BridgeRow | null> {
   const { data, error } = await supabase.from('v_terms_floor_bridge').select('gross,financing,net,suppliers').eq('run_id', runId).maybeSingle()
   fail(error)
   return data ? num(data as BridgeRow, ['gross', 'financing', 'net', 'suppliers']) : null
-}
-
-export async function getPriceIndex(runId: number): Promise<IndexRow[]> {
-  const { data, error } = await supabase.from('v_price_radar_index').select('year,articles_index,path_index,index_rate').eq('run_id', runId).order('year')
-  fail(error)
-  return (data ?? []).map((r) => num(r as IndexRow, ['articles_index', 'path_index', 'index_rate']))
 }
 
 export async function getDedup(period: Period): Promise<DedupRow | null> {

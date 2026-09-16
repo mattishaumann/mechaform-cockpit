@@ -11,12 +11,11 @@ import { columns, RegisterTable, type Column } from '../components/RegisterTable
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { ComparisonCards } from '../components/ComparisonCards'
 import { ContractTable } from '../components/ContractTable'
-import { PriceIndexChart } from '../components/PriceIndexChart'
 import { TermsBridge } from '../components/TermsBridge'
 import { TierYearChart, type TierYear } from '../components/TierYearChart'
 import { copy } from '../copy'
 import { AGENTS, type CaseKey } from '../lib/agents'
-import { getCases, getConfig, getContractTable, getLatestRuns, getPriceIndex, getRegister, getStats, getTermsBridge, runAgent, subscribe, type BridgeRow, type ConfigRow, type ContractRow, type IndexRow, type RegisterRow, type RunRow } from '../lib/data'
+import { getCases, getConfig, getContractTable, getLatestRuns, getRegister, getStats, getTermsBridge, runAgent, subscribe, type BridgeRow, type ConfigRow, type ContractRow, type RegisterRow, type RunRow } from '../lib/data'
 import { formatConfidence, formatEur, formatInt } from '../lib/format'
 import { getNames } from '../lib/names'
 import { periodLabel, usePeriod } from '../lib/period'
@@ -29,7 +28,6 @@ const layerColumns: Record<string, Column[]> = {
   'Tier Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, columns.tierPrice, columns.gap, columns.recommendation, columns.status],
   'Tier Guard (annual volume)': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.tierPrice, columns.gap, columns.recommendation, columns.status],
   'Terms Floor': [columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
-  'Price Radar': [columns.article, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
   'Preferred Steering': [columns.article, columns.supplier, columns.volume, columns.baseline, columns.target, columns.gap, columns.recommendation, columns.status],
   ...indexLayerColumns,   // preview agent Index Guard
 }
@@ -70,10 +68,9 @@ export function Agent() {
     const layerRuns = layers.map((l) => runs.find((r) => r.case_name === l.key)).filter((r): r is RunRow => Boolean(r))
     const main = layerRuns[0]
     // the page's one chart, read for the main run
-    const chart: { contracts?: ContractRow[]; bridge?: BridgeRow | null; index?: IndexRow[]; top?: RegisterRow[]; names?: Awaited<ReturnType<typeof getNames>> } = {}
+    const chart: { contracts?: ContractRow[]; bridge?: BridgeRow | null; top?: RegisterRow[]; names?: Awaited<ReturnType<typeof getNames>> } = {}
     if (main && config?.chart === 'contract_table') chart.contracts = await getContractTable(main.id)
     if (main && config?.chart === 'bridge') chart.bridge = await getTermsBridge(main.id)
-    if (main && config?.chart === 'indexed_line') chart.index = await getPriceIndex(main.id)
     if (main && config?.chart === 'comparison_cards') {
       chart.top = (await getRegister(main.id, 0, 3)).rows
       chart.names = await getNames([...new Set(chart.top.map((r) => r.supplier_no).filter((x): x is number => x != null))], [...new Set(chart.top.map((r) => r.article_no).filter((x): x is number => x != null))])
@@ -116,7 +113,6 @@ export function Agent() {
         {config.chart === 'tier_columns' && Boolean(stats.tier_share_by_year) && <TierYearChart data={stats.tier_share_by_year as TierYear[]} />}
         {main && config.chart === 'contract_table' && <ContractTable rows={chart.contracts ?? []} total={main.total} />}
         {main && config.chart === 'bridge' && <TermsBridge data={chart.bridge ?? null} rate={cfgValue(params, 'financing_rate')} day={cfgValue(params, 'skonto_days')} />}
-        {main && config.chart === 'indexed_line' && <PriceIndexChart rows={chart.index ?? []} />}
         {main && config.chart === 'comparison_cards' && <ComparisonCards rows={chart.top ?? []} names={chart.names ?? { suppliers: {}, articles: {} }} onRow={setSelected} />}
         {config.chart === 'index_basket' && <IndexGuardPanel runId={main?.id ?? null} />}
       </div>

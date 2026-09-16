@@ -35,15 +35,6 @@ test('R18 Terms Floor: bridge from Skonto gained to net gain', async ({ page }) 
   await expect(b.locator('[data-step="net"]')).toContainText('€1,017,963')
 })
 
-test('R19 Price Radar: indexed line against the assumed path, labelled Annahme', async ({ page }) => {
-  await page.goto(`/agents/price_radar${Y}`)
-  const c = page.getByTestId('price-index-chart')
-  for (const y of ['2024', '2025', '2026']) await expect(c.getByTestId('price-index-table')).toContainText(y)
-  await expect(c).toContainText('Annahme')
-  await expect(c).toContainText('Kostenvermeidung')
-  await expect(c.getByTestId('price-index-table')).toContainText('108.7')
-})
-
 test('R20 Preferred Steering: comparison cards, largest gap first', async ({ page }) => {
   await page.goto(`/agents/preferred_steering${Y}`)
   const first = page.getByTestId('comparison-card').first()
@@ -55,7 +46,7 @@ test('R20 Preferred Steering: comparison cards, largest gap first', async ({ pag
   await expect(page.getByTestId('evidence-drawer').getByTestId('recommendation-card')).toContainText('NUR INTERN')
 })
 
-for (const key of ['contract_guard', 'tier_guard', 'terms_floor', 'price_radar', 'preferred_steering']) {
+for (const key of ['contract_guard', 'tier_guard', 'terms_floor', 'preferred_steering']) {
   test(`R21 ${key}: a row opens the drawer with evidence and the card`, async ({ page }) => {
     await page.goto(`/agents/${key}${Y}`)
     const drawer = await openFirstRow(page, key)

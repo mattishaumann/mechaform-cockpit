@@ -46,7 +46,7 @@ export function Cockpit() {
   const lastRun = data.runs.map((r) => r.finished_at).filter(Boolean).sort().at(-1) ?? null
   const split = data.split
   const name = (k: string) => data.cases.find((c) => c.case_key === k)?.name ?? k
-  const radarOn = Boolean(data.cases.find((c) => c.case_key === 'price_radar')?.enabled)
+  const avoidance = (split?.cost_avoidance ?? 0) > 0   // no cost-avoidance case enabled since Price Radar was cancelled
   const indexRate = data.config.find((c) => c.key === 'index_rate')?.value ?? 0
   const cliff = data.stats.contract_cliff_spend as { value: number } | undefined
   const blocked = data.stats.blocked_supplier_spend as { value: number; suppliers: number } | undefined
@@ -64,7 +64,7 @@ export function Cockpit() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className={`mt-8 grid gap-4 md:grid-cols-2 ${avoidance ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
         <div data-testid="headline" className="rounded-lg border border-border bg-surface p-6 md:col-span-2">
           <p className={label}>{copy.cockpit.hardLabel}, {periodLabel(period)}</p>
           <p data-testid="hard-savings" data-tabular className="mt-2 text-5xl font-semibold tracking-tight text-brand">{formatEur(split?.hard ?? 0)}</p>
@@ -81,15 +81,13 @@ export function Cockpit() {
             </p>
           )}
         </div>
-        <div data-testid="cost-avoidance" className="rounded-lg border border-border bg-surface p-6">
-          <p className={label}>{copy.cockpit.avoidanceLabel}</p>
-          {radarOn ? (
-            <>
-              <p data-tabular className="mt-2 text-3xl font-semibold tracking-tight">{formatEur(split?.cost_avoidance ?? 0)}</p>
-              <p className="mt-2 text-sm text-text-muted">{copy.cockpit.avoidanceNote(formatPct(indexRate, 1))}</p>
-            </>
-          ) : <p className="mt-2 text-sm text-text-muted">{copy.cockpit.avoidanceOff}</p>}
-        </div>
+        {avoidance && (
+          <div data-testid="cost-avoidance" className="rounded-lg border border-border bg-surface p-6">
+            <p className={label}>{copy.cockpit.avoidanceLabel}</p>
+            <p data-tabular className="mt-2 text-3xl font-semibold tracking-tight">{formatEur(split?.cost_avoidance ?? 0)}</p>
+            <p className="mt-2 text-sm text-text-muted">{copy.cockpit.avoidanceNote(formatPct(indexRate, 1))}</p>
+          </div>
+        )}
         <div data-testid="kept-apart" className="rounded-lg border border-border bg-surface p-6">
           <p className={label}>{copy.cockpit.keptApart}</p>
           {cliff && <p className="mt-2 text-sm"><span data-tabular className="text-lg font-semibold">{formatEur(cliff.value)}</span><br /><span className="text-text-muted">{copy.cockpit.contractCliff}</span></p>}
