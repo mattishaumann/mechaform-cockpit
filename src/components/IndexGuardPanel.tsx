@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { getCategorySummary, getIndexData, getIndexSummary, getTopFindings, type BasketWeight, type CategoryRow, type IndexDefinition, type IndexPoint, type IndexSummaryRow } from '../lib/indexGuard'
+import { getCategorySummary, getFindingsByIds, getIndexData, getIndexSummary, getSupplierCount, getTopSuppliers, type BasketWeight, type CategoryRow, type IndexDefinition, type IndexPoint, type IndexSummaryRow } from '../lib/indexGuard'
 import { getConfig, type RegisterRow, type RunRow } from '../lib/data'
-import { getNames } from '../lib/names'
 import { formatEur, toNumber } from '../lib/format'
 import { CategoryVerdict, IndexActionItems } from './IndexActionItems'
 import { useQuery } from '../lib/useQuery'
@@ -103,13 +102,11 @@ export function IndexGuardPanel({ lineRun, contractsRun, onOpen }: { lineRun: Ru
       runId ? getCategorySummary(runId) : Promise.resolve([] as CategoryRow[]),
       getConfig(),
     ])
-    const actions = actionRunId ? await getTopFindings(actionRunId, ACTIONS) : ([] as RegisterRow[])
-    const names = await getNames(
-      [...new Set(actions.map((r) => r.supplier_no).filter((x): x is number => x != null))],
-      [...new Set(actions.map((r) => r.article_no).filter((x): x is number => x != null))],
-    )
+    const suppliers = runId ? await getTopSuppliers(runId, ACTIONS) : []
+    const actions = await getFindingsByIds(suppliers.map((s) => s.top_register_id))
+    const supplierCount = runId ? await getSupplierCount(runId) : 0
     const tolerance = toNumber(config.find((c) => c.key === 'index_tolerance')?.value ?? 0.03)
-    return { summary, ...idx, categories, actions, names, tolerance }
+    return { summary, ...idx, categories, suppliers, actions, supplierCount, tolerance }
   }, [runId, actionRunId])
   const categories = useMemo(() => {
     const by = new Map<string, { name: string; spend: number; excess: number }>()
@@ -129,13 +126,13 @@ export function IndexGuardPanel({ lineRun, contractsRun, onOpen }: { lineRun: Ru
   const rows = q.data.summary.filter((r) => r.category_no === current)
   const lastMonth = rows.length ? rows[rows.length - 1].month : null
   const cat = categories.find((c) => c.no === current)
-  const shownGap = q.data.actions.reduce((a, r) => a + Number(r.gap_eur), 0)
-  const totalGap = Number(contractsRun?.total ?? 0) + Number(lineRun?.total ?? 0)
-  const restCount = Math.max(0, Number(contractsRun?.rows ?? 0) + Number(lineRun?.rows ?? 0) - q.data.actions.length)
+  const shownGap = q.data.suppliers.reduce((a, r) => a + Number(r.gap_eur), 0)
+  const totalGap = Number(lineRun?.total ?? 0)   // the supplier list reads the order-line layer
+  const restCount = Math.max(0, q.data.supplierCount - q.data.suppliers.length)
   const verdictRow = q.data.categories.find((c) => c.category_no === current) ?? null
   return (
     <div className="space-y-4">
-      <IndexActionItems rows={q.data.actions} names={q.data.names} restCount={restCount} restGap={Math.max(0, totalGap - shownGap)} onOpen={onOpen} />
+      <IndexActionItems rows={q.data.suppliers} findings={q.data.actions} restCount={restCount} restGap={Math.max(0, totalGap - shownGap)} onOpen={onOpen} />
       <SampleBanner sample={sample} />
       {!runId || categories.length === 0 ? <EmptyState text={copy.charts.noRun} /> : (
         <figure data-testid="index-guard-chart" className="rounded-lg border border-border bg-surface p-4">

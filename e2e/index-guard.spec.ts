@@ -28,15 +28,16 @@ test('I8 cockpit keeps Index Guard out of the strategy cards and shows it as a p
 })
 
 // Spec mvp-index-guard I12, I13: the takeaway. Action items first, then the verdict for the category in the chart.
-test('I12 action items name the largest contract positions and open their evidence', async ({ page }) => {
+test('I12 recommendations name the suppliers furthest above the index, with evidence and the trainer', async ({ page }) => {
   await page.goto('/agents/index_guard?from=2026-01-01&to=2026-12-31')
   await page.getByTestId('run-agent').click()
   await expect(page.getByTestId('run-agent')).toBeEnabled({ timeout: 90_000 })
   const items = page.getByTestId('index-action')
   await expect(items).toHaveCount(3, { timeout: 20_000 })
-  await expect(items.first()).toContainText('Preisgespräch zu Vertrag 4600001')
-  await expect(items.first()).toContainText('Eisengießerei Lausitz')
-  await expect(items.first()).toContainText('Indexpreis')
+  await expect(items.first()).toContainText('Preise mit Eisengießerei Lausitz')
+  await expect(items.first()).toContainText('über dem Indexpreis')
+  await expect(items.first()).toContainText('Vertrag 4600001')
+  await expect(items.first().getByTestId('index-train')).toHaveAttribute('href', '/trainer')
   await expect(page.getByTestId('index-action-rest')).toContainText('Weitere')
   await items.first().getByRole('button', { name: 'Beleg öffnen' }).click()
   await expect(page.getByTestId('evidence-drawer')).toBeVisible()

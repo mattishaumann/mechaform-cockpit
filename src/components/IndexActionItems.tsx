@@ -1,21 +1,18 @@
 import type { RegisterRow } from '../lib/data'
-import type { CategoryRow } from '../lib/indexGuard'
-import { formatEur, formatInt, formatPct, formatPrice, toNumber } from '../lib/format'
-import type { Names } from './RegisterTable'
+import { Link } from 'react-router-dom'
+import type { CategoryRow, TopSupplier } from '../lib/indexGuard'
+import { formatEur, formatInt, formatPct, toNumber } from '../lib/format'
 import { copy } from '../copy'
 import { Button } from './Button'
 import { Pill } from './Pill'
 import { EmptyState } from './States'
 
 const label = 'font-mono text-xs uppercase tracking-widest text-text-muted'
-const det = (r: RegisterRow, k: string): string | null => {
-  const v = (r.detail ?? {})[k]
-  return v == null ? null : String(v)
-}
 const pct = (v: unknown) => `${toNumber(v) >= 0 ? '+' : ''}${formatPct(v, 1)}`
 
-// The run's largest findings as the things to do next: one line each, the numbers behind it, and the evidence one click away.
-export function IndexActionItems({ rows, names, restCount, restGap, onOpen }: { rows: RegisterRow[]; names: Names; restCount: number; restGap: number; onOpen: (r: RegisterRow) => void }) {
+// The agent's recommendation per supplier: renegotiate where the index difference is largest, with the numbers behind it,
+// the evidence one click away and the trainer for preparing the conversation.
+export function IndexActionItems({ rows, findings, restCount, restGap, onOpen }: { rows: TopSupplier[]; findings: RegisterRow[]; restCount: number; restGap: number; onOpen: (r: RegisterRow) => void }) {
   return (
     <section data-testid="index-actions" className="rounded-lg border border-border bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -25,26 +22,30 @@ export function IndexActionItems({ rows, names, restCount, restGap, onOpen }: { 
       {rows.length === 0 ? <div className="mt-3"><EmptyState text={copy.index.actionsNone} /></div> : (
         <ol className="mt-3 space-y-3">
           {rows.map((r, i) => {
-            const contract = det(r, 'contract_no')
-            const article = `${names.articles[r.article_no ?? -1] ?? ''} ${r.article_no ?? ''}`.trim()
+            const evidence = findings.find((f) => f.id === r.top_register_id)
             return (
-              <li key={r.id} data-testid="index-action" data-register-id={r.id} className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-bg p-3">
+              <li key={r.supplier_no} data-testid="index-action" data-supplier={r.supplier_no} className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border bg-bg p-3">
                 <div className="min-w-0 max-w-prose">
                   <p className="text-sm font-medium">
                     <span data-tabular className="mr-2 text-text-muted">{i + 1}</span>
-                    {contract ? copy.index.actionContract(contract) : copy.index.actionNoContract(article)}
+                    {copy.index.supplierAction(r.supplier_name)}
                   </p>
-                  <p className="mt-1 text-sm text-text-muted">{names.suppliers[r.supplier_no ?? -1] ?? r.supplier_no}, {article}</p>
-                  <p className="mt-1 text-sm">{copy.index.actionNumbers(formatPrice(r.baseline), formatPrice(det(r, 'index_price')), pct(det(r, 'deviation')), formatEur(r.gap_eur), formatInt(r.volume))}</p>
-                  <p className="mt-1 text-xs text-text-muted">{copy.index.actionAsk}</p>
+                  <p className="mt-1 text-sm">{copy.index.supplierNumbers(formatInt(r.findings), formatInt(r.articles), pct(r.deviation), formatEur(r.gap_eur))}</p>
+                  <p className="mt-1 text-sm text-text-muted">
+                    {r.top_article && copy.index.supplierArticle(r.top_article)}
+                    {r.contract_count > 0 && r.top_contract_no && <> · {copy.index.supplierContracts(formatInt(r.contract_count), r.top_contract_no)}</>}
+                  </p>
+                  <p className="mt-2 text-sm">
+                    <Link data-testid="index-train" to="/trainer" className="rounded-sm text-text underline decoration-border-strong underline-offset-2 transition-colors duration-fast hover:decoration-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:text-text-muted">{copy.index.trainLink}</Link>
+                  </p>
                 </div>
-                <Button variant="secondary" onClick={() => onOpen(r)}>{copy.index.actionOpen}</Button>
+                {evidence && <Button variant="secondary" onClick={() => onOpen(evidence)}>{copy.index.actionOpen}</Button>}
               </li>
             )
           })}
         </ol>
       )}
-      {restCount > 0 && <p data-testid="index-action-rest" className="mt-3 border-t border-border pt-3 text-sm text-text-muted">{copy.index.actionRest(formatInt(restCount), formatEur(restGap))}</p>}
+      {restCount > 0 && <p data-testid="index-action-rest" className="mt-3 border-t border-border pt-3 text-sm text-text-muted">{copy.index.actionRestSuppliers(formatInt(restCount), formatEur(restGap))}</p>}
     </section>
   )
 }

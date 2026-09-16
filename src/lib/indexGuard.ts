@@ -12,6 +12,8 @@ export interface IndexPoint { index_code: string; month: string; value: number }
 export interface CategoryRow { run_id: number; category_no: string; category_name: string | null; spend: number; lines_judged: number; paid_index: number; basket_index: number; above_basket: number; findings: number; gap_eur: number }
 export interface BasketWeight { category_no: string; material_type: string; component: string; weight: number; note: string | null }
 
+export interface TopSupplier { run_id: number; supplier_no: number; supplier_name: string; findings: number; articles: number; gap_eur: number; deviation: number; top_register_id: number; top_article_no: number | null; top_article: string | null; contract_count: number; top_contract_no: string | null }
+
 const fail = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
 
 export async function getIndexSummary(runId: number): Promise<IndexSummaryRow[]> {
@@ -63,4 +65,24 @@ const ig = {
 export const indexLayerColumns: Record<string, Column[]> = {
   'Index Guard': [columns.order, columns.date, columns.article, columns.supplier, columns.quantity, columns.paid, ig.indexPrice, ig.priceChange, ig.indexChange, ig.deviation, columns.gap, ig.contract, columns.status],
   'Index Guard (contracts)': [ig.contract, columns.article, columns.supplier, columns.volume, columns.baseline, ig.indexPrice, ig.priceChange, ig.indexChange, ig.deviation, columns.gap, columns.status],
+}
+
+// The suppliers furthest above their cost index in a run: the agent's recommendation list (spec mvp-index-guard I12).
+export async function getTopSuppliers(runId: number, limit: number): Promise<TopSupplier[]> {
+  const { data, error } = await supabase.from('v_index_guard_top_suppliers').select('*').eq('run_id', runId).order('gap_eur', { ascending: false }).limit(limit)
+  fail(error)
+  return (data ?? []).map((r) => ({ ...r, findings: toNumber(r.findings), articles: toNumber(r.articles), gap_eur: toNumber(r.gap_eur), deviation: toNumber(r.deviation), contract_count: toNumber(r.contract_count) })) as TopSupplier[]
+}
+
+export async function getSupplierCount(runId: number): Promise<number> {
+  const { count, error } = await supabase.from('v_index_guard_top_suppliers').select('supplier_no', { count: 'exact', head: true }).eq('run_id', runId)
+  fail(error)
+  return count ?? 0
+}
+
+export async function getFindingsByIds(ids: number[]): Promise<RegisterRow[]> {
+  if (ids.length === 0) return []
+  const { data, error } = await supabase.from('mvp_register').select('*').in('id', ids)
+  fail(error)
+  return (data ?? []) as RegisterRow[]
 }
