@@ -34,7 +34,8 @@ test('T5 a recommended case shows its brief, its history and an empty chat', asy
   const history = page.getByTestId('history-panel')
   await expect(history).toContainText('Supplies')
   await expect(history).toContainText('Not in the data')
-  await expect(page.getByTestId('chat-empty')).toBeVisible()
+  await expect(page.getByTestId('chat-empty')).toContainText('Suggested opening')
+  await expect(page.getByTestId('why-panel')).toContainText('above the cost basket')
   await expect(page.getByTestId('chat')).toContainText('8 turns left')
   await page.getByTestId('back-to-cases').click()
   await expect(page.getByTestId('candidate')).toHaveCount(3)
@@ -51,6 +52,8 @@ test('T6 practice chat (answers routed, no spend): turns stack up and the turn c
   await page.goto('/trainer')
   await page.getByTestId('candidate').first().click()
   const box = page.getByTestId('chat-form').getByLabel('Your next message')
+  await expect(box).toHaveValue(/Thank you for making time.*above our cost index basket/s)   // the suggested opening, built in SQL
+  await box.fill('')
   await expect(page.getByTestId('chat-form').getByRole('button', { name: 'Send' })).toBeDisabled()
   await box.fill('Your prices run 12.1% above the basket on the articles without a contract.')
   await box.press('Enter')
@@ -72,4 +75,17 @@ test('T6 a rejected reply shows the inline error and keeps the message', async (
   await form.getByRole('button', { name: 'Send' }).click()
   await expect(form.getByTestId('live-error')).toContainText('did not pass the checks')
   await expect(form.getByLabel('Your next message')).toBeEnabled()
+})
+
+test('T9 target any supplier from the list and get a suggested opening for it', async ({ page }) => {
+  await page.goto('/trainer')
+  const search = page.getByTestId('supplier-search')
+  await search.getByLabel('Supplier name').fill('Lausitz')
+  await search.getByRole('button', { name: 'Or target a supplier' }).click()
+  const hits = page.getByTestId('search-hit')
+  await expect(hits.first()).toContainText('Lausitz', { timeout: 20_000 })
+  await hits.first().click()
+  await expect(page.getByTestId('history-panel')).toContainText('Supplies', { timeout: 20_000 })
+  await expect(page.getByTestId('why-panel')).toHaveCount(0)   // only a recommended case carries the reason
+  await expect(page.getByTestId('chat-form').getByLabel('Your next message')).toHaveValue(/Thank you for making time/)
 })

@@ -66,10 +66,14 @@ const TOOL = {
   },
 }
 
-// numbers a reply must not invent: amounts, decimals, numbers of three or more digits, and percentages
+// numbers a reply must not invent: amounts, decimals, numbers of three or more digits, and percentages.
+// A bare year (2020 to 2035) is a time reference, not a claim about the customer's data, so it passes; the prompt still
+// asks for relative wording ("from the next order"), and amounts, percentages and dates stay guarded.
 const norm = (v: string) => v.replace(/[€\s,]/g, '').replace(/%$/, '')
+const bareYear = (t: string) => /^(20[2-3]\d)$/.test(t)
 function guardedNumbers(text: string): string[] {
-  return [...text.matchAll(/€?\d[\d,]*(?:\.\d+)?%?/g)].map((m) => m[0]).filter((t) => t.startsWith('€') || t.endsWith('%') || t.includes('.') || norm(t).length >= 3)
+  return [...text.matchAll(/€?\d[\d,]*(?:\.\d+)?%?/g)].map((m) => m[0])
+    .filter((t) => !bareYear(t) && (t.startsWith('€') || t.endsWith('%') || t.includes('.') || norm(t).length >= 3))
 }
 
 Deno.serve(async (req) => {
