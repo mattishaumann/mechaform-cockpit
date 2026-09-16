@@ -1,6 +1,6 @@
 // trainer-turn: one turn of the negotiation trainer (preview). The model plays the supplier and a coach in one forced tool call.
 // The brief is built by rules (v_supplier_brief); the model writes language and may use only numbers from the brief or the
-// buyer's message. Stored sessions are seeded once and replay from the database; a live session takes one turn.
+// buyer's message. Stored sessions are seeded once and replay from the database; a live session runs a capped practice chat.
 // Same harness as draft-action: budget guard, forced schema, post-checks, every call logged with its input and output.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -8,6 +8,7 @@ const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 700
 const BUDGET_USD = 3.5
 const STORED_TURNS = 5
+const LIVE_TURNS_MAX = 8   // a practice chat, capped per session; the budget guard sits on top
 const MESSAGE_MAX_CHARS = 600
 const SUPPLIER_WORDS_MAX = 90
 const PRICE = { input: 1e-6, output: 5e-6, cached: 0.1e-6 }
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
   const { data: session } = await admin.from('mvp_trainer_sessions').select('*').eq('id', sessionId).maybeSingle()
   if (!session) return json({ error: 'unknown_session' }, 404)
   const { data: own } = await admin.from('mvp_trainer_turns').select('turn_no,buyer,supplier').eq('session_id', sessionId).order('turn_no')
-  if (session.kind === 'live' && (own ?? []).length >= 1) return json({ error: 'live_turn_used' }, 409)
+  if (session.kind === 'live' && (own ?? []).length >= LIVE_TURNS_MAX) return json({ error: 'live_turns_used', max: LIVE_TURNS_MAX }, 409)
   if (session.kind === 'stored' && (own ?? []).length >= STORED_TURNS) return json({ error: 'stored_session_full' }, 409)
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
