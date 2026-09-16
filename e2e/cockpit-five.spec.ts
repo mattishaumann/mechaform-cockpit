@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { sql } from './db'
+import { sql, sqlRows } from './db'
 
 // Price Radar was cancelled on 2026-09-16 (spec mvp-recommendations, Price Radar cancelled): four agents on the cockpit
 const AGENTS = ['contract_guard', 'tier_guard', 'terms_floor']
@@ -30,11 +30,14 @@ test('R12 a switched-off agent is muted, logged and left out of "Run all agents"
   await expect(page.getByTestId('activity-feed').locator('li').first()).toContainText('Terms Floor: switched off')
   await page.reload()
   await expect(page.getByTestId('agent-card-terms_floor')).toHaveAttribute('data-enabled', 'false')   // persisted in the database
+  // other sessions run agents on the same database, so ask the database what this click started, not the shared run log
+  const t0 = String(sqlRows('select now() as t')[0].t)
   await page.getByTestId('run-all').click()
   await expect(page.getByTestId('run-all')).toBeEnabled({ timeout: 90_000 })
-  const log = page.getByTestId('run-log').locator('li')   // the log lists the last five runs
-  await expect(log.filter({ hasText: 'Terms Floor' })).toHaveCount(0)
-  await expect(log.filter({ hasText: 'Contract Guard' })).not.toHaveCount(0)
+  const started = sqlRows(`select agent, count(*) as n from agent_runs where started_at > '${t0}' group by agent`)
+  const byAgent = Object.fromEntries(started.map((r) => [r.agent, Number(r.n)]))
+  expect(byAgent.terms_floor ?? 0).toBe(0)
+  expect(byAgent.contract_guard ?? 0).toBeGreaterThan(0)
   await page.getByTestId('agent-card-terms_floor').getByRole('switch').click()
   await expect(page.getByTestId('agent-card-terms_floor')).toHaveAttribute('data-enabled', 'true')
 })
