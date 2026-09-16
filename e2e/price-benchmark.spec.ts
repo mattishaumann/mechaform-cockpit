@@ -56,9 +56,11 @@ test('P6 method folds open: four steps, today (sample) against at scale', async 
   await expect(steps.nth(3)).toContainText('RFQ')
 })
 
-test('P7 cockpit: headline unchanged with a grey note, flagship card with the range, run log shows no single figure', async ({ page }) => {
+test('P7 cockpit: the scan never moves the headline, flagship card shows the range, run log shows no single figure', async ({ page }) => {
   await page.goto('/?from=2026-01-01&to=2026-12-31')
-  await expect(page.getByTestId('hard-savings')).toHaveText('€3,926,438')
+  const headline = page.getByTestId('hard-savings')
+  const before = await headline.textContent()
+  expect(before).toMatch(/^€[\d,]+$/)
   await expect(page.getByTestId('benchmark-note')).toContainText('potentially a lot')
   await expect(page.getByTestId('benchmark-note')).toContainText('Not counted')
   const card = page.getByTestId('flagship-card-price_benchmark')
@@ -66,8 +68,10 @@ test('P7 cockpit: headline unchanged with a grey note, flagship card with the ra
   await expect(card.getByTestId('flagship-value')).toHaveText('€1.8M – €3.0M / year')
   await expect(page.getByTestId('agent-card-price_benchmark')).toHaveCount(0)   // never a strategy card, whatever the card count is
   await expect(page.getByTestId('nav-flagship')).toBeVisible()
+
   await card.getByTestId('flagship-run-button').click()
   await expect(card.getByTestId('flagship-run-button')).toBeEnabled({ timeout: 30_000 })
+  await expect(headline).toHaveText(before!)   // the scan counts in no total
   const log = page.getByTestId('run-log')
   await expect(log.locator('li', { hasText: 'External Price Benchmark' }).first()).toContainText('Range, low confidence', { timeout: 15_000 })
 })
