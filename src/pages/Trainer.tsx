@@ -4,7 +4,7 @@ import { Pill } from '../components/Pill'
 import { EmptyState, ErrorState, Skeleton } from '../components/States'
 import { copy } from '../copy'
 import { formatEur, formatInt, formatPct } from '../lib/format'
-import { getBrief, getCandidates, getOpening, getStoredSession, getSupplierHistory, getTurns, searchSuppliers, sendTurn, startLiveSession, startTrainerSession, type BriefFact, type Candidate, type SupplierHistory, type SupplierHit, type Turn } from '../lib/trainer'
+import { getBrief, getCandidates, getOpening, getStoredSession, getSupplierContact, getSupplierHistory, getTurns, searchSuppliers, sendTurn, startLiveSession, startTrainerSession, type BriefFact, type Candidate, type Contact, type SupplierHistory, type SupplierHit, type Turn } from '../lib/trainer'
 import { useQuery } from '../lib/useQuery'
 
 const label = 'font-mono text-xs uppercase tracking-widest text-text-muted'
@@ -81,7 +81,25 @@ function HistoryPanel({ h }: { h: SupplierHistory }) {
   )
 }
 
-function TurnView({ turn, supplier, facts, live = false }: { turn: Turn; supplier: string; facts: BriefFact[]; live?: boolean }) {
+// The supplier's representative: initials in a circle, the name and the title, so it reads as a person, not a role.
+function Avatar({ initials }: { initials: string }) {
+  return <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-brand-tint font-mono text-xs uppercase tracking-widest text-text">{initials}</span>
+}
+
+function ContactHead({ contact, supplier }: { contact: Contact | null; supplier: string }) {
+  if (!contact) return <p className={label}>{copy.trainer.supplierRole(supplier)}</p>
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar initials={contact.initials} />
+      <span>
+        <span data-testid="contact-name" className="block text-sm font-medium">{contact.full_name}</span>
+        <span className="block text-xs text-text-muted">{copy.trainer.contactLine(contact.role, supplier)}</span>
+      </span>
+    </div>
+  )
+}
+
+function TurnView({ turn, supplier, facts, contact, live = false }: { turn: Turn; supplier: string; facts: BriefFact[]; contact?: Contact | null; live?: boolean }) {
   const next = facts.find((f) => f.fact_id === turn.coach.next_fact_id)
   return (
     <article data-testid="turn" data-turn={turn.turn_no} data-live={live || undefined} className="reveal space-y-3">
@@ -91,7 +109,7 @@ function TurnView({ turn, supplier, facts, live = false }: { turn: Turn; supplie
       </div>
       <div data-testid="supplier-reply" className="rounded-lg border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={label}>{copy.trainer.supplierRole(supplier)}</p>
+          <ContactHead contact={contact ?? null} supplier={supplier} />
           <Pill tone={turn.supplier.concession === 'none' ? 'neutral' : 'positive'}>{copy.trainer.concession[turn.supplier.concession] ?? turn.supplier.concession}</Pill>
         </div>
         <p className="mt-1 max-w-prose text-base leading-relaxed">{turn.supplier.message}</p>
@@ -117,6 +135,8 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
+  const contactQ = useQuery(() => getSupplierContact(supplierNo), [supplierNo])
+  const contact = contactQ.data ?? null
   const end = useRef<HTMLDivElement>(null)
   const box = useRef<HTMLTextAreaElement>(null)
   const run = useRef(0)   // a refused turn puts its text back, unless "start over" has since cleared the conversation
@@ -170,9 +190,22 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
           </div>
         </div>
       )}
+      {contact && (
+        <div data-testid="contact-card" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4">
+          <div className="flex items-center gap-3">
+            <Avatar initials={contact.initials} />
+            <span>
+              <span className={label}>{copy.trainer.speakingWith}</span>
+              <span data-testid="contact-name" className="mt-1 block text-base font-medium">{contact.full_name}</span>
+              <span className="block text-sm text-text-muted">{copy.trainer.contactLine(contact.role, supplier)}</span>
+            </span>
+          </div>
+          <p className="max-w-prose text-xs text-text-muted">{copy.trainer.contactInvented}</p>
+        </div>
+      )}
       <p className="text-xs text-text-muted">{copy.trainer.chatNote(CHAT_MAX)}</p>
       {turns.length === 0 && !pending && <p data-testid="chat-empty" className="text-sm text-text-muted">{opening ? copy.trainer.suggested : copy.trainer.chatEmpty}</p>}
-      {turns.map((t) => <TurnView key={t.id} turn={t} supplier={supplier} facts={facts} live />)}
+      {turns.map((t) => <TurnView key={t.id} turn={t} supplier={supplier} facts={facts} contact={contact} live />)}
       {pending && (
         <div className="space-y-3">
           <div className="rounded-lg bg-bg p-4"><p className={label}>{copy.trainer.you}</p><p className="mt-1 max-w-prose text-base leading-relaxed">{pending}</p></div>
@@ -180,16 +213,16 @@ function Chat({ supplierNo, supplier, facts, storedId, opening }: { supplierNo: 
             <span aria-hidden="true" className="flex gap-1">
               {[0, 1, 2].map((i) => <span key={i} className="typing-dot h-2 w-2 rounded-full bg-brand" />)}
             </span>
-            <span className="text-sm text-text-muted">{copy.trainer.typing(supplier)}</span>
+            <span className="text-sm text-text-muted">{copy.trainer.typing(contact ? `${contact.honorific} ${contact.last_name}` : supplier)}</span>
           </div>
         </div>
       )}
       <div ref={end} />
       <form data-testid="chat-form" onSubmit={submit} className="space-y-2">
         <label htmlFor="chat-message" className={label}>{copy.trainer.liveLabel}</label>
-        <textarea id="chat-message" ref={box} value={message} onChange={(e) => setMessage(e.target.value)} disabled={busy || left <= 0} rows={4} maxLength={600} placeholder={copy.trainer.livePlaceholder}
+        <textarea id="chat-message" ref={box} value={message} onChange={(e) => setMessage(e.target.value)} disabled={busy || left <= 0} rows={5} maxLength={2000} placeholder={copy.trainer.livePlaceholder}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }}
-          className="block max-h-96 w-full resize-none overflow-y-auto rounded-md border border-border-strong bg-surface px-4 py-3 text-base leading-relaxed text-text transition-colors duration-fast placeholder:text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50" />
+          className="block w-full resize-none overflow-y-auto rounded-md border border-border-strong bg-surface px-4 py-3 text-lg leading-relaxed text-text transition-colors duration-fast placeholder:text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50" />
         {error && <p role="alert" data-testid="live-error" className="text-sm text-danger-500">{error}</p>}
         <div className="flex justify-end"><Button type="submit" variant="primary" loading={busy} disabled={!message.trim() || left <= 0}>{copy.trainer.send}</Button></div>
       </form>

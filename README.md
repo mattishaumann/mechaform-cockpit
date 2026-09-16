@@ -1,116 +1,76 @@
-# mechaform-cockpit
+# MechaForm procurement cockpit
 
-Tacto-branded, read-only procurement cockpit for MechaForm GmbH. Shows the savings agents found in the 2026 order history, reading pre-computed cases, flagged rows and descriptive figures from a Supabase project. Nothing is recomputed in the browser.
+Savings agents that read MechaForm's own order history and turn what they find into something a buyer can act on. Every figure on screen comes from the database, computed by a named rule over a named period; the browser displays, it never calculates.
 
-Spec of record: `~/dev/mattis-vault/cases/tacto/specs/mvp-cockpit.md`.
+Live: https://mechaform-cockpit.vercel.app
 
-## Run locally
+## Run it
 
 ```bash
 npm install
-cp .env.example .env.local   # then fill in the two Supabase values
+cp .env.example .env.local   # VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
 npm run dev
+npm run check                # types, unit tests, UI gate, end-to-end suite
 ```
 
-Environment variables:
+The anon key is public by design: the database grants select only, and every write goes through a security-definer function.
 
-| Variable | Meaning |
-|---|---|
-| `VITE_SUPABASE_URL` | Project URL, e.g. `https://<project-ref>.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | The project's anon key (public by design; the database allows select only) |
-| `VITE_ENABLED_AGENTS` | Comma-separated case keys to show, default `contract_guard,tier_guard` |
+## One shape for every agent
 
-## Run model
+An agent is a Postgres function, not a script. `run_agent(key, from, to)` dispatches to `run_<agent>(from, to)`, which upserts its findings into `mvp_register` on the finding's natural key, prunes what it no longer produces, and records the run in `agent_runs`. Rerunning a period is therefore free of duplicates, and the ids, statuses, tasks and drafts attached to a finding survive it. The cockpit reads `mvp_cases` for what each agent claims to do, so a new agent is one function, one row and one entry in `src/lib/agents.ts`. Thresholds (tolerances, financing rate, Skonto day, due days) live in `mvp_config` rather than in code, so the same rule can be re-run under a different assumption.
 
-Each agent is a Postgres function in the Supabase project (`run_contract_guard`, `run_tier_guard` plus its annual layer, `run_terms_floor`, `run_price_radar`, `run_preferred_steering`), reached through one entry point `run_agent(agent, period_start, period_end)`. A run upserts its findings into `mvp_register` on a natural key (case, order and position for line-level findings; case, supplier and article for pair-level ones; always with the period), prunes the findings of that case and period it no longer produces, records itself in `agent_runs`, and stores its gap-by-month trend in `agent_trend`. Register ids, statuses, drafts and tasks therefore survive reruns. The functions are security definer; the anon role can call `run_agent` and read, but cannot write tables directly. The browser subscribes to `mvp_register` and `agent_runs` through Supabase Realtime, so findings and run status appear without a reload. The period comes from the URL (`?from=&to=`), default calendar 2026, with year, quarter and month presets and a custom range. Nothing is computed in the browser.
+Each finding is `volume × (what we paid − what the rule says we should have paid)` over the selected period. What the target price is depends on the case:
 
-## Cockpit and agent pages
+| Agent | Finding | Target price | 2026 |
+|---|---|---|---|
+| Contract Guard | Order lines placed without the framework contract that exists for that supplier and article | The agreed contract price | €675,529 |
+| Tier Guard | Quantities that reached a price tier the order did not use, per order and per year | The tier price the quantity earned | €605,424 |
+| Terms Floor | Suppliers who grant an early-payment discount on some lines and withhold it on others | The best rate that supplier already grants, net of the cost of paying early | €1,017,963 |
 
-The cockpit headline is **hard savings**: one primary case per article at case level (Contract Guard, Tier Guard as the larger of its two overlapping layers, Preferred Steering) plus Terms Floor, from the view `v_savings_split`. Price Radar is shown apart as cost avoidance against an assumed index path; exposures (contract cliff, blocked-supplier spend) are shown apart again. Each agent card has an on/off switch (`set_agent_enabled`, stored in `mvp_cases.enabled`): a switched-off agent is muted, skipped by "Run all agents" and left out of the headline. `VITE_ENABLED_AGENTS` still decides which agents a deployment shows at all (default: all five).
+The headline counts each article once (**€2,298,917** hard savings for 2026; €2,548,687 gross before the overlap between cases is removed) through the view `v_savings_split`. Nothing else is added to it.
 
-Each agent page has one chart, read from views over the run's own findings: a contract table (Contract Guard, `v_contract_guard_contracts`), the tier column chart (Tier Guard, `mvp_stats`), a bridge from Skonto gained to net gain (Terms Floor, `v_terms_floor_bridge`), the flagged articles' price index against the assumed path (Price Radar, `v_price_radar_index`) and comparison cards preferred against cheapest supplier (Preferred Steering). Every row opens the evidence drawer with the recommendation card. The register page lists all findings of the latest runs for the period and filters by the role a recommendation addresses. Thresholds (tolerances, index rate, financing rate, Skonto day, on-time margin, due days) live in `mvp_config` and show in each agent's explanation panel.
+## From a finding to an action
 
-## Adding an agent
+Every finding carries a `recommendation`, built in SQL from its own numbers: who acts internally, who is written to externally, in which order, and one sentence of reasoning. It also offers scenarios the way a procurement tool suggests next moves: what to do, what it is worth, and what to do first. Tasks are real rows (`mvp_tasks`), so the register can be filtered by the role a recommendation lands on, and the activity feed records what happened.
 
-1. Write `run_<agent>(p_start date, p_end date)` in `supabase/sql/reco_harness.sql` following the existing ones (open a run, upsert findings with `run_id` on the finding key, close the run) and add its branch to `run_agent`.
-2. Add its row to `mvp_cases` (name, summary, rule, trigger, evidence, calculation, action, action_type, confidence), its recommendation template in `fill_recommendations` (`supabase/sql/reco_recommend.sql`) and its entry in `src/lib/agents.ts` (module, register layers, chart).
-3. Add the case key to `VITE_ENABLED_AGENTS`.
+Who acts comes from the data as far as it goes: the export has no buyer master, so a recommendation names "Einkäufer {buyer_no}" from the order and the plant from its line, Kategorieeinkauf is the purchasing organisation with the most volume on the article, and Finanzen and Qualität are labelled as roles rather than people. Where the channel is a letter to the supplier, a draft is generated and marked as a draft to review before sending.
 
-## Parity with the notebook
+## Preview agents
 
-`supabase/sql/verify_runs.sql` (in the dataset folder) runs all five agents over 2026 and prints rows and totals per run. They must match the analysis notebook to the euro: Contract Guard 675,529; Tier Guard 254,503 and 600,692; Terms Floor 1,017,963; Price Radar 3,341,179; Preferred Steering 1,639,801. The Q1 2026 block checks period semantics (Contract Guard 9 rows, 173,134; Tier Guard 95 rows, 64,371).
+Three agents run beside the verified ones. They are marked preview, they never enter a total, and each page says why:
 
-## Who acts
+- **Index Guard** escalates every supplier and article's base-year price with a cost basket for its category (material, energy, labour, fixed share) and flags what sits above the band. It recommends renegotiating with the suppliers furthest above their index and hands the case to the trainer. The index series are generated sample data until a real feed is loaded through `supabase/index/load_index.py` (three CSVs: definitions, monthly values, basket weights), every screen that shows them says so, and the basket weights and the tolerance need tuning before any supplier conversation.
+- **External Price Benchmark** infers the real part behind an article that has no manufacturer part number, compares MechaForm's price with public web prices and sizes the gap as a range. Four articles are matched today; the page shows what the same scan needs at scale and never presents the range as confirmed savings.
+- **Negotiation trainer** turns a finding into a practice conversation: the supplier's representative answers from the brief's facts, a coach scores each turn, and the opening message is written from the supplier's own figures.
 
-Every finding carries a `recommendation` (jsonb on `mvp_register`), filled in SQL when a run closes (`supabase/sql/reco_recommend.sql` in the dataset folder): the internal recipients with the reason and a due date, the external message when there is one, the order (internal first, external first, internal only) and one rationale sentence built from the finding's own numbers with a fixed template. No model is involved. The identities come from the data as far as it goes:
+## Where a model is used, and where it is not
 
-- **Einkäufer**: `order_headers.buyer_no` of the order (five buyers: 3400, 4471, 8190, 9215, A124). There is no buyer master table and no name anywhere in the export, so the app shows "Einkäufer {buyer_no}".
-- **Plant**: `order_items.plant` carries code and name (01_01 Augsburg, 01_02 Chemnitz, 01_03 Hamburg); it is shown next to the buyer where the rule is plant-specific.
-- **Kategorieeinkauf**: the category buyer is represented by the purchasing organisation (`purchasing_organization_no`, 0010, 0020, 0030) with the most volume or spend on the pair or article; every buyer orders in all three, so there is no person to name.
-- **Finanzen** and **Qualität**: roles, not people. The export has no finance or quality contact; the card labels them "Rolle, keine Person".
+Rules decide; the model only writes language. It is called for supplier drafts and for the trainer, always with a fixed payload, a forced output schema and post-checks that reject a reply using a number that is not in its input, leaking the prompt, or breaking the house style. Every call is logged with its tokens and cost in `mvp_llm_calls`, a budget guard stops the spend, and anything a supplier or a user typed is passed as delimited, untrusted content. A rejected reply is stored with its reason instead of being shown.
 
-"Aufgabe anlegen" writes a row to `mvp_tasks` through `create_task` (idempotent per finding and recipient) and moves the finding to "in Bearbeitung"; nothing is sent. Thresholds and due days live in `mvp_config`.
+## Saying what the numbers are worth
 
-## Negotiation trainer (preview)
+Assumptions are labelled where they appear, not in a footnote: the sample index data, the invented supplier contact in the trainer, the benchmark's low-confidence range, the cost avoidance that is deliberately kept out of the savings headline. An agent whose basis is an assumption is a preview agent and stays out of every total.
 
-`/trainer` lets a buyer practise a negotiation with Getriebebau Arnold on the 2026 data. The input is the supplier brief, English fact lines built by rules from the register (`v_supplier_brief`: spend, Contract Guard, Terms Floor, Preferred Steering, contract end date). One Edge Function, `trainer-turn`, answers each buyer message in one forced tool call: the supplier's key account manager (concedes in steps, trades for renewal or payment discipline, may only use numbers from the brief or the buyer's message) and a coach card (strong, ok or weak, one tactic, the next fact to use). Same harness as `draft-action`: the brief, earlier turns and the typed message sit in `<untrusted_data>` blocks declared content, a canary catches leaked instructions, post-checks reject invented numbers, unknown fact ids, dashes and exclamation marks, and every call is logged with session `trainer:<id>` in the shared 3.50 USD budget.
+## Layout
 
-The stored session (five scripted buyer messages, answers generated once) replays from `mvp_trainer_turns` without any model call; the presenter steps through it with "Next turn". After it, one live turn per session (`start_live_session` branches from the stored one; a second turn is refused with `live_turn_used`). `node scripts/trainer-seed.mjs` seeds or completes the stored session and prints the spend.
+```
+src/pages           cockpit, agent page, register, trainer
+src/components      strategy cards, evidence drawer, recommendation and scenario cards, charts
+src/lib             agent registry, typed data access, one query hook
+src/copy.ts         all UI copy in one place
+src/styles          design tokens; components reference semantic tokens only
+e2e                 one spec per acceptance criterion, run against the live database
+supabase/functions  the two model-facing Edge Functions
+```
+
+The SQL that defines the agents, the views and the seeds lives with the dataset (`supabase/sql/`) and is applied with `supabase db query --linked --file`.
 
 ## Checks
 
-`npm run check` runs typecheck, unit tests, the UI gate (`scripts/check-ui.sh`) and the Playwright suite against the live project, including the three-agent and five-agent configuration runs and the empty-state and error-state runs. The live tests trigger real agent runs on the project. Because findings keep their ids across reruns, the tests that create a task reset it first through the linked Supabase CLI (`e2e/db.ts`), so the CLI must be logged in and linked (`supabase link`). Database checks for spec mvp-recommendations: `python3 supabase/reco_checks.py R1 R3 R4 R5 R6 R7 R22` in the dataset folder.
+`npm run check` runs the types, the unit tests, a UI gate (tokens only, no stray hex, every interactive state present) and the end-to-end suite, including the runs that need their own environment. The agents are additionally checked against the analysis notebook to the euro (`verify_runs.sql`, `reco_checks.py`, `benchmark_checks.py`), so a change that moves a number fails loudly rather than quietly.
 
 ## Deploy
 
 ```bash
 npx vercel --prod
 ```
-
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables in the Vercel project first. `vercel.json` carries the Vite build and the single-page rewrite.
-
-## Language-model drafts
-
-One Supabase Edge Function, `draft-action`, turns a finding's evidence into a German supplier message (Belastungsanzeige, Preiskorrektur, Konditionenanfrage). Since the scope reset the app calls it only from the recommendation card's external block ("Entwurf erstellen"), so the model writes text only where the channel is an email; the internal-only cases (Price Radar, Preferred Steering) get no model call. The harness passes a fixed payload: a TASK line (task, language, output limits) and an `<untrusted_data>` block with the finding's numbers, evidence, recommendation and facts; the system prompt declares every string in that block content, never instructions, and `<` is escaped so no supplier name can close the block. The rules computed every number; the model only writes language from the payload it receives and must echo every number it uses with its source field. The function checks the answer (numbers present in the input, orders present in the evidence, no forbidden words, no recovery language in briefings), stores passing drafts in `mvp_drafts` with their input, logs every call with its session key (`draft:<register_id>:<task>`), input, raw output and estimated cost in `mvp_llm_calls`, serves cached drafts first, and stops at a cumulative 3.50 USD. Model: Haiku 4.5, 700 output tokens, cached system block.
-
-Secrets, set once by hand and never committed:
-
-```bash
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-```
-
-```bash
-echo "ANTHROPIC_API_KEY=sk-ant-..." >> .env.local
-```
-
-The scripts read `.env.local` (gitignored). `npm run llm:tests` runs the three brief cases once against the API; `npm run llm:precompute` drafts the three highest-gap findings per case and prints the spend, stopping above 1 USD; `npm run llm:demo` regenerates the two drafts the demo opens (Contract Guard 508565, Terms Floor Getriebebau Arnold) and prints their cost. In the app, "Aktion entwerfen" on a finding shows the draft next to its evidence; "Als gesendet markieren (Simulation)" only changes the status and never sends anything.
-
-Drafts survive agent re-runs because a rerun keeps each finding's id (`supabase/sql/reco_harness.sql` in the dataset folder replaced the earlier carry-over in `active_carry.sql`). "Run all agents" therefore never discards the precomputed drafts.
-
-
-## Index Guard (preview)
-
-A sixth agent that checks prices against a cost index instead of an assumed flat rate (spec `mvp-index-guard` in the vault). For every supplier and article pair it escalates the base-year price with a cost basket of the article's category, the price escalation formula German contracts use:
-
-```
-index price = base-year price x (fixed share + sum of weight x index now / index at base)
-finding     = paid price > index price x (1 + index_tolerance)     gap counts only above that band
-```
-
-It writes two layers, every order line and every contract position, so it names the exact orders and contracts that are off the index. It runs as a preview: listed under "Preview" in the navigation and as a strip under the strategy cards, `enabled = false` in `mvp_cases`, never part of hard savings, cost avoidance or gross.
-
-**The index data is a sample.** The series in `index_series` are generated for this MVP from a few anchor points; each one names the published series it stands in for (Destatis producer prices, LME metals, the negotiated wage index). The basket weights in `category_index_map` and the 3% tolerance are judgement. Weights, tolerance and the base-price rule need tuning with real data before any supplier conversation; the page and every finding say so.
-
-Replacing the sample with a real feed needs no code change. Put three CSVs in a folder and load them:
-
-```
-index_definitions.csv   index_code, name, stands_in_for, unit, source, is_sample (false for a real feed)
-index_series.csv        index_code, month (YYYY-MM-01), value, source
-category_index_map.csv  category_no ('*' = default), material_type ('' = any), component (index_code or FIXED), weight, note
-```
-
-```bash
-python3 supabase/index/load_index.py --dir path/to/feed   # run from the dataset folder; the sample lives in supabase/index/
-```
-
-Then rerun the agent. Months missing from a feed carry the last value forward. Database objects: `supabase/sql/index_schema.sql`, `supabase/sql/index_functions.sql` in the dataset folder. Checks: `node scripts/index-guard-check.mjs` (recomputes index prices independently) and `e2e/index-guard.spec.ts`.

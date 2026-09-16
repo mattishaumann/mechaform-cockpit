@@ -5,12 +5,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const MODEL = 'claude-haiku-4-5-20251001'
-const MAX_TOKENS = 700
+const MAX_TOKENS = 900
 const BUDGET_USD = 3.5
 const STORED_TURNS = 5
 const LIVE_TURNS_MAX = 8   // a practice chat, capped per session; the budget guard sits on top
-const MESSAGE_MAX_CHARS = 600
-const SUPPLIER_WORDS_MAX = 90
+const MESSAGE_MAX_CHARS = 2000   // the suggested opening alone runs to about 900 characters
+const SUPPLIER_WORDS_MAX = 130   // the guard sits above the instruction, so a small overshoot does not throw away a paid call
 const PRICE = { input: 1e-6, output: 5e-6, cached: 0.1e-6 }
 const CANARY = 'TRAINER-CANARY-7Q4X'
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type' }
@@ -28,7 +28,7 @@ The buyer practises a negotiation with one supplier. You play two roles in one a
    Give a full
    concession on a topic only after the buyer has pressed that same topic with its numbers in an earlier turn as well. Vary
    how you open; do not start with thanks. Never invent a number: use only numbers that appear in INPUT or in the buyer's
-   message, or none at all, and never a year or date that is not in INPUT. At most 90 words, plain English, courteous, no em or en dashes, no exclamation marks. Echo every
+   message, or none at all, and never a year or date that is not in INPUT. At most 100 words, plain English, courteous, no em or en dashes, no exclamation marks. Echo every
    number you use in numbers_used with its source.
 2. coach: a demanding procurement negotiation coach speaking to the buyer. Assess the buyer's latest message: strong only when
    it uses a fact from the brief with its number, asks for a concrete outcome and answers the supplier's last argument; weak
@@ -72,7 +72,7 @@ const TOOL = {
 const norm = (v: string) => v.replace(/[€\s,]/g, '').replace(/%$/, '')
 const bareYear = (t: string) => /^(20[2-3]\d)$/.test(t)
 function guardedNumbers(text: string): string[] {
-  return [...text.matchAll(/€?\d[\d,]*(?:\.\d+)?%?/g)].map((m) => m[0])
+  return [...text.matchAll(/€?\d[\d,]*(?:\.\d+)?%?/g)].map((m) => m[0].replace(/,+$/, ''))   // a trailing comma is punctuation, not part of the number
     .filter((t) => !bareYear(t) && (t.startsWith('€') || t.endsWith('%') || t.includes('.') || norm(t).length >= 3))
 }
 
@@ -132,8 +132,12 @@ Deno.serve(async (req) => {
   // post-checks: numbers from the input only, fact ids from the brief, house style, length, no leaked instructions
   const reasons: string[] = []
   const allowed = new Set(guardedNumbers(`${JSON.stringify(facts)}\n${buyer}`).map(norm))
-  const message = String(call.supplier.message ?? '')
-  const note = String(call.coach.note ?? '')
+  // A dash is a style slip, not a factual error: normalise it instead of throwing away a paid call.
+  const noDash = (t: string) => t.replace(/\s*[—–]\s*/g, (m) => (/^\s|\s$/.test(m) ? ' - ' : '-'))
+  const message = noDash(String(call.supplier.message ?? ''))
+  const note = noDash(String(call.coach.note ?? ''))
+  call.supplier.message = message
+  call.coach.note = note
   for (const n of guardedNumbers(message)) if (!allowed.has(norm(n))) reasons.push(`number not in input: ${n}`)
   const inputText = `${JSON.stringify(facts)}\n${buyer}`
   for (const n of call.supplier.numbers_used ?? []) { const v = norm(String(n.value)); if (v.length >= 3 && !allowed.has(v) && !allowed.has(Number(v).toFixed(2)) && !inputText.includes(String(n.value))) reasons.push(`numbers_used not in input: ${n.value}`) }

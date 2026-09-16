@@ -6,6 +6,8 @@ const num = <T extends object>(r: T, keys: (keyof T)[]): T => { const o = { ...r
 
 export const TRAINER = { supplierNo: 3000742, from: '2026-01-01', to: '2026-12-31' }   // Getriebebau Arnold, calendar 2026
 
+export interface Contact { honorific: string; first_name: string; last_name: string; full_name: string; role: string; initials: string }
+
 export interface Candidate { supplier_no: number; supplier_name: string; gap: number; lines: number; articles: number; deviation: number; free_spend: number; free_articles: number; has_contract_elsewhere: boolean; spend: number; first_order: string; years_active: number; spend_all_years: number; why: string; opening: string }
 export interface SupplierHit { supplier_no: number; supplier_name: string; spend: number; order_lines: number; years_active: number }
 export interface SupplierHistory { supplier_name: string; city: string | null; country: string | null; supplier_status: string; public_website_url: string | null; spend: number; order_lines: number; orders: number; articles: number; on_time: number | null; buyers: string; categories: string | null; first_order: string; last_order: string; years_active: number; spend_all_years: number }
@@ -88,4 +90,11 @@ export async function sendTurn(sessionId: number, message: string): Promise<Turn
     return { error: error.message }
   }
   return data ?? {}
+}
+
+// The person on the other side of the practice conversation, invented per supplier in SQL and labelled as invented.
+export async function getSupplierContact(supplierNo: number): Promise<Contact | null> {
+  const { data, error } = await supabase.rpc('supplier_contact', { p_supplier: supplierNo })
+  if (error) throw new Error(error.message)
+  return ((data ?? [])[0] as Contact) ?? null
 }
