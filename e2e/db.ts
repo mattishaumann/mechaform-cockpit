@@ -11,3 +11,10 @@ export function sql(query: string): string {
     }
   }
 }
+
+// Rows of a query, for assertions that must not depend on a shared, busy run log.
+export function sqlRows(query: string): Record<string, unknown>[] {
+  const out = sql(query)
+  const body = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1))
+  return (body.rows ?? []) as Record<string, unknown>[]
+}
