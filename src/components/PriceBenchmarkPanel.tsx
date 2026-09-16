@@ -87,6 +87,16 @@ function ResultCard({ item: i }: { item: BenchmarkItem }) {
       <p className={`${label} mt-5`}>{b.recommendation}</p>
       <p data-testid="benchmark-reco" className="mt-1 max-w-prose text-base">{reco}</p>
 
+      <div className="mt-5 rounded-md border border-border bg-bg p-4">
+        <p className={label}>{b.webShowed}</p>
+        <p data-testid="benchmark-web" className="mt-1 text-sm">{b.webPrice} (€): {i.benchmark.price_eur}</p>
+        <p className="mt-1 text-xs text-text-muted">{i.benchmark.price_type}</p>
+        <p className="mt-1 text-xs text-text-muted">
+          {b.source}: <a data-testid="benchmark-source" href={i.benchmark.source_url} target="_blank" rel="noopener noreferrer"
+            className="rounded-sm text-text underline decoration-border-strong underline-offset-2 transition-colors duration-fast hover:decoration-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-text-muted">{i.benchmark.source_name}</a>, {b.retrieved(i.researched_on)}
+        </p>
+      </div>
+
       <div className="mt-5 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
         <div>
           <p className={label}>{b.savingsLabel}</p>
@@ -132,13 +142,7 @@ function ResultCard({ item: i }: { item: BenchmarkItem }) {
               {comp.reason && <p className="mt-2 text-xs text-text-muted">{comp.reason}</p>}
             </div>
             <div>
-              <p className={label}>{b.compare}</p>
-              <p className="mt-1 text-xs text-text-muted">{b.webPrice} (€): {i.benchmark.price_eur} · {i.benchmark.price_type}</p>
-              <p className="mt-1 text-xs text-text-muted">
-                {b.source}: <a data-testid="benchmark-source" href={i.benchmark.source_url} target="_blank" rel="noopener noreferrer"
-                  className="rounded-sm text-text underline decoration-border-strong underline-offset-2 transition-colors duration-fast hover:decoration-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:text-text-muted">{i.benchmark.source_name}</a>, {b.retrieved(i.researched_on)}
-              </p>
-              <p className={`${label} mt-4`}>{b.suppliers}</p>
+              <p className={label}>{b.suppliers}</p>
               <table className="mt-1 w-full text-sm">
                 <tbody>
                   {i.suppliers.map((s) => (
