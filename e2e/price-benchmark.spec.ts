@@ -64,7 +64,7 @@ test('P7 cockpit: headline unchanged with a grey note, flagship card with the ra
   const card = page.getByTestId('flagship-card-price_benchmark')
   await expect(card).toContainText('Low confidence')
   await expect(card.getByTestId('flagship-value')).toHaveText('€1.8M – €3.0M / year')
-  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(5)
+  await expect(page.getByTestId('agent-card-price_benchmark')).toHaveCount(0)   // never a strategy card, whatever the card count is
   await expect(page.getByTestId('nav-flagship')).toBeVisible()
   await card.getByTestId('flagship-run-button').click()
   await expect(card.getByTestId('flagship-run-button')).toBeEnabled({ timeout: 30_000 })
