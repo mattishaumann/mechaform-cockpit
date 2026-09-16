@@ -27,6 +27,7 @@ export function Layout({ children, agentNames }: { children: ReactNode; agentNam
           <p className={`hidden md:block ${group}`}>{copy.nav.overview}</p>
           <NavLink to={{ pathname: '/', search: window.location.search }} end className={link}>{copy.cockpit.title}</NavLink>
           <NavLink to={{ pathname: '/register', search: window.location.search }} className={link}>{copy.register.title}</NavLink>
+          <NavLink data-testid="nav-ai" to={{ pathname: '/ai', search: window.location.search }} className={link}>{copy.nav.ai}</NavLink>
           <p className={`hidden md:block ${group}`}>{copy.nav.agents}</p>
           {enabledAgents.map((k) => (
             <NavLink key={k} to={{ pathname: `/agents/${k}`, search: window.location.search }} className={link}>{agentNames[k] ?? AGENTS[k].key}</NavLink>

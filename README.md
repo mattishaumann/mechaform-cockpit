@@ -74,3 +74,15 @@ The SQL that defines the agents, the views and the seeds lives with the dataset 
 ```bash
 npx vercel --prod
 ```
+
+## Where a language model is used
+
+The page /ai ("AI in this MVP" in the navigation) states it for the demo; this is the same list.
+
+| Where | What the model does | When it runs |
+|---|---|---|
+| Drafts on a finding (`draft-action`) | Writes the German supplier letter or an internal briefing; every number comes from the finding and is echoed with its source, claims cite order numbers, a check rejects any number not in the input, nothing is sent | On request, stored; prepared drafts load without a call |
+| Negotiation trainer (`trainer-turn`) | Plays the supplier's key account manager and a coach; the brief is built by rules, the supplier text is content inside `untrusted_data` with a canary | Live, one call per turn, up to 8 turns per session; the stored Arnold example replays without a call |
+| External Price Benchmark | Guessed the part behind four articles and researched web prices with links | Once, offline, 2026-09-15; stored as the seed |
+
+No model: Contract Guard, Tier Guard, Terms Floor, Index Guard (SQL formula, sample index from a script), recommendations, scenarios, tasks and every total. Around every call: Claude Haiku 4.5 from server functions only, a forced output schema, every call stored in `mvp_llm_calls` with tokens and cost, one shared budget cap of $3.50.

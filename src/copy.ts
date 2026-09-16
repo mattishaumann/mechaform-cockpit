@@ -2,7 +2,54 @@
 export const copy = {
   brand: 'tacto',
   // sidebar groups: what is live, what the agents are, what is a preview
-  nav: { overview: 'Overview', agents: 'Agents', preview: 'Preview agents' },
+  nav: { overview: 'Overview', agents: 'Agents', preview: 'Preview agents', ai: 'AI in this MVP' },
+  // Where a language model is used (page /ai); every statement checked against the Edge Functions and the seed, 2026-09-16
+  aiUse: {
+    title: 'Where a language model is used',
+    subtitle: 'Every savings figure comes from rules in the database. A language model only writes language, in three places, and a person reads the result before anything happens.',
+    modelTitle: 'Three places with a model',
+    cols: { where: 'Where', does: 'What the model does', rules: 'What stays with the rules', guard: 'Guardrails', runs: 'When it runs' },
+    rows: [
+      {
+        key: 'drafts',
+        where: 'Drafts on a finding',
+        does: 'Writes the German letter to the supplier (Belastungsanzeige, Preiskorrektur, Konditionenanfrage) or an internal negotiation briefing.',
+        rules: 'Every number, order, contract, tier and plant in the text.',
+        guard: 'Uses only numbers from the finding and names the source of each; every claim cites order numbers; refuses when the evidence is thin; a check rejects any number that was not in the input. Nothing is sent: sending is simulated.',
+        runs: 'On request, then stored. Prepared drafts load without a model call.',
+      },
+      {
+        key: 'trainer',
+        where: 'Negotiation trainer',
+        does: "Plays the supplier's key account manager and a coach who scores each turn.",
+        rules: 'The supplier brief: spend, findings and their euros, built from the register. The named contact is invented by a rule because the export has no contact data, and is labelled as invented.',
+        guard: "Uses only numbers from the brief or the buyer's message. The buyer's text is treated as content, not as instructions, and that is tested with a canary. A check rejects a number not in the input, an unknown fact and an exclamation mark.",
+        runs: 'Live, one call per turn, up to 8 turns per practice session. The stored example with Getriebebau Arnold was generated once and replays without a call.',
+      },
+      {
+        key: 'benchmark',
+        where: 'External Price Benchmark',
+        does: 'Guessed the real part behind four articles from description and weight, and researched web prices with their links.',
+        rules: "MechaForm's quantities and prices, recomputed from the orders on every run.",
+        guard: 'Stored as a sample of 4 of 5,077 articles with a low-confidence badge; the next steps start with checking the specification.',
+        runs: 'Once, offline, on 2026-09-15. Not live.',
+      },
+    ],
+    noModelTitle: 'No model',
+    noModel: [
+      'Contract Guard, Tier Guard and Terms Floor: rules in SQL, reproduced to the euro against the analysis notebook.',
+      'Index Guard: a price escalation formula in SQL. The sample index series come from a script, not from a model.',
+      'Recommendations, who acts, scenarios, tasks and every total.',
+    ],
+    commonTitle: 'Around every model call',
+    common: [
+      'Claude Haiku 4.5, called only from server functions. The API key never reaches the browser.',
+      'A fixed output schema, so every answer is structured data that can be checked, not free text.',
+      'Every call is stored with its input, output, tokens and cost. One shared budget cap of $3.50 stops further calls.',
+    ],
+    builtTitle: 'How the MVP itself was built',
+    built: 'The analysis and this app were built with AI tools (Claude Code, Claude Cowork) and a second model as reviewer. Every figure was rechecked against the data before it went into the deck or the app.',
+  },
   productName: 'Procurement cockpit',
   customer: 'MechaForm GmbH',
   cockpit: {
