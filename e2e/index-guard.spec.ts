@@ -19,9 +19,35 @@ test('I7 Index Guard page: sample banner, category chart, basket, both layers af
   await expect(page.getByTestId('evidence-drawer')).toBeVisible()
 })
 
-test('I8 cockpit keeps five strategy cards and shows Index Guard as a preview', async ({ page }) => {
+test('I8 Index Guard is a preview, not a strategy card', async ({ page }) => {
   await page.goto('/')
-  await expect(page.locator('[data-testid^="agent-card-"]')).toHaveCount(5)
   await expect(page.getByTestId('preview-card-index_guard')).toContainText('Sample index data')
   await expect(page.getByTestId('nav-preview-index_guard')).toBeVisible()
+  await expect(page.locator('[data-testid="agent-card-index_guard"]')).toHaveCount(0)   // the card count itself is R11's assertion
+})
+
+// Spec mvp-index-guard I12, I13: the takeaway. Action items first, then the verdict for the category in the chart.
+test('I12 action items name the largest contract positions and open their evidence', async ({ page }) => {
+  await page.goto('/agents/index_guard?from=2026-01-01&to=2026-12-31')
+  await page.getByTestId('run-agent').click()
+  await expect(page.getByTestId('run-agent')).toBeEnabled({ timeout: 90_000 })
+  const items = page.getByTestId('index-action')
+  await expect(items).toHaveCount(3, { timeout: 20_000 })
+  await expect(items.first()).toContainText('Preisgespräch zu Vertrag 4600001')
+  await expect(items.first()).toContainText('Eisengießerei Lausitz')
+  await expect(items.first()).toContainText('Indexpreis')
+  await expect(page.getByTestId('index-action-rest')).toContainText('Weitere')
+  await items.first().getByRole('button', { name: 'Beleg öffnen' }).click()
+  await expect(page.getByTestId('evidence-drawer')).toBeVisible()
+})
+
+test('I13 category verdict: negotiate for castings, watch below the tolerance', async ({ page }) => {
+  await page.goto('/agents/index_guard?from=2026-01-01&to=2026-12-31')
+  const verdict = page.getByTestId('index-verdict')
+  await expect(verdict).toHaveAttribute('data-verdict', 'negotiate', { timeout: 20_000 })
+  await expect(verdict).toContainText('Verhandlung empfohlen')
+  await expect(verdict).toContainText('über dem Kostenkorb')
+  await page.getByTestId('index-cat-1009').click()
+  await expect(verdict).toHaveAttribute('data-verdict', 'watch')
+  await expect(verdict).toContainText('unter der Toleranz')
 })

@@ -118,7 +118,7 @@ export function Agent() {
         {main && config.chart === 'bridge' && <TermsBridge data={chart.bridge ?? null} rate={cfgValue(params, 'financing_rate')} day={cfgValue(params, 'skonto_days')} />}
         {main && config.chart === 'indexed_line' && <PriceIndexChart rows={chart.index ?? []} />}
         {main && config.chart === 'comparison_cards' && <ComparisonCards rows={chart.top ?? []} names={chart.names ?? { suppliers: {}, articles: {} }} onRow={setSelected} />}
-        {config.chart === 'index_basket' && <IndexGuardPanel runId={main?.id ?? null} />}
+        {config.chart === 'index_basket' && <IndexGuardPanel lineRun={main ?? null} contractsRun={layerRuns[1] ?? null} onOpen={setSelected} />}
       </div>
       <HowPanel row={row} params={params} />
       {!main && <div className="mt-6"><EmptyState text={copy.agent.noRun} /></div>}

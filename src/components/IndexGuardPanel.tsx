@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { getIndexData, getIndexSummary, type BasketWeight, type IndexDefinition, type IndexPoint, type IndexSummaryRow } from '../lib/indexGuard'
-import { formatEur } from '../lib/format'
+import { getCategorySummary, getIndexData, getIndexSummary, getTopFindings, type BasketWeight, type CategoryRow, type IndexDefinition, type IndexPoint, type IndexSummaryRow } from '../lib/indexGuard'
+import { getConfig, type RegisterRow, type RunRow } from '../lib/data'
+import { getNames } from '../lib/names'
+import { formatEur, toNumber } from '../lib/format'
+import { CategoryVerdict, IndexActionItems } from './IndexActionItems'
 import { useQuery } from '../lib/useQuery'
 import { copy } from '../copy'
 import { Button } from './Button'
@@ -84,11 +87,26 @@ function BasketTable({ category, baskets, definitions, series, lastMonth }: { ca
   )
 }
 
-export function IndexGuardPanel({ runId }: { runId: number | null }) {
+const ACTIONS = 3
+
+export function IndexGuardPanel({ lineRun, contractsRun, onOpen }: { lineRun: RunRow | null; contractsRun: RunRow | null; onOpen: (r: RegisterRow) => void }) {
+  const runId = lineRun?.id ?? null
+  const actionRunId = contractsRun?.id ?? runId   // contract positions first: they name the agreement to reopen
   const q = useQuery(async () => {
-    const [summary, idx] = await Promise.all([runId ? getIndexSummary(runId) : Promise.resolve([] as IndexSummaryRow[]), getIndexData()])
-    return { summary, ...idx }
-  }, [runId])
+    const [summary, idx, categories, config] = await Promise.all([
+      runId ? getIndexSummary(runId) : Promise.resolve([] as IndexSummaryRow[]),
+      getIndexData(),
+      runId ? getCategorySummary(runId) : Promise.resolve([] as CategoryRow[]),
+      getConfig(),
+    ])
+    const actions = actionRunId ? await getTopFindings(actionRunId, ACTIONS) : ([] as RegisterRow[])
+    const names = await getNames(
+      [...new Set(actions.map((r) => r.supplier_no).filter((x): x is number => x != null))],
+      [...new Set(actions.map((r) => r.article_no).filter((x): x is number => x != null))],
+    )
+    const tolerance = toNumber(config.find((c) => c.key === 'index_tolerance')?.value ?? 0.03)
+    return { summary, ...idx, categories, actions, names, tolerance }
+  }, [runId, actionRunId])
   const categories = useMemo(() => {
     const by = new Map<string, { name: string; spend: number; excess: number }>()
     for (const r of q.data?.summary ?? []) {
@@ -107,8 +125,13 @@ export function IndexGuardPanel({ runId }: { runId: number | null }) {
   const rows = q.data.summary.filter((r) => r.category_no === current)
   const lastMonth = rows.length ? rows[rows.length - 1].month : null
   const cat = categories.find((c) => c.no === current)
+  const shownGap = q.data.actions.reduce((a, r) => a + Number(r.gap_eur), 0)
+  const totalGap = Number(contractsRun?.total ?? 0) + Number(lineRun?.total ?? 0)
+  const restCount = Math.max(0, Number(contractsRun?.rows ?? 0) + Number(lineRun?.rows ?? 0) - q.data.actions.length)
+  const verdictRow = q.data.categories.find((c) => c.category_no === current) ?? null
   return (
     <div className="space-y-4">
+      <IndexActionItems rows={q.data.actions} names={q.data.names} restCount={restCount} restGap={Math.max(0, totalGap - shownGap)} onOpen={onOpen} />
       <SampleBanner sample={sample} />
       {!runId || categories.length === 0 ? <EmptyState text={copy.charts.noRun} /> : (
         <figure data-testid="index-guard-chart" className="rounded-lg border border-border bg-surface p-4">
@@ -120,6 +143,7 @@ export function IndexGuardPanel({ runId }: { runId: number | null }) {
           </div>
           {cat && <p className="mt-3 text-sm text-text-muted">{copy.index.categoryLine(formatEur(cat.spend))}</p>}
           <div className="mt-2"><CategoryChart rows={rows} /></div>
+          <CategoryVerdict row={verdictRow} tolerance={q.data.tolerance} />
           <p className={`${label} mt-6`}>{copy.index.basketTitle}</p>
           <div className="mt-2"><BasketTable category={current ?? '*'} baskets={q.data.baskets} definitions={q.data.definitions} series={q.data.series} lastMonth={lastMonth} /></div>
           <p className="mt-3 max-w-prose text-xs text-text-muted">{copy.index.chartNote}</p>

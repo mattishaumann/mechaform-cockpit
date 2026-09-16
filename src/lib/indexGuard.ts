@@ -9,6 +9,7 @@ import { copy } from '../copy'
 export interface IndexSummaryRow { run_id: number; category_no: string; category_name: string | null; month: string; spend: number; paid_index: number; basket_index: number; lines: number }
 export interface IndexDefinition { index_code: string; name: string; stands_in_for: string | null; unit: string | null; source: string | null; is_sample: boolean }
 export interface IndexPoint { index_code: string; month: string; value: number }
+export interface CategoryRow { run_id: number; category_no: string; category_name: string | null; spend: number; lines_judged: number; paid_index: number; basket_index: number; above_basket: number; findings: number; gap_eur: number }
 export interface BasketWeight { category_no: string; material_type: string; component: string; weight: number; note: string | null }
 
 const fail = (e: { message: string } | null) => { if (e) throw new Error(e.message) }
@@ -31,6 +32,20 @@ export async function getIndexData(): Promise<{ definitions: IndexDefinition[]; 
     series: (s.data ?? []).map((r) => ({ ...r, value: toNumber(r.value) })) as IndexPoint[],
     baskets: (b.data ?? []).map((r) => ({ ...r, weight: toNumber(r.weight) })) as BasketWeight[],
   }
+}
+
+// takeaway per category: what the run found next to what the basket explains
+export async function getCategorySummary(runId: number): Promise<CategoryRow[]> {
+  const { data, error } = await supabase.from('v_index_guard_category').select('*').eq('run_id', runId).order('gap_eur', { ascending: false })
+  fail(error)
+  return (data ?? []).map((r) => ({ ...r, spend: toNumber(r.spend), lines_judged: toNumber(r.lines_judged), paid_index: toNumber(r.paid_index), basket_index: toNumber(r.basket_index), above_basket: toNumber(r.above_basket), findings: toNumber(r.findings), gap_eur: toNumber(r.gap_eur) })) as CategoryRow[]
+}
+
+// the run's largest findings, contract positions first: these are the action items
+export async function getTopFindings(runId: number, limit: number): Promise<RegisterRow[]> {
+  const { data, error } = await supabase.from('mvp_register').select('*').eq('run_id', runId).order('gap_eur', { ascending: false }).limit(limit)
+  fail(error)
+  return (data ?? []).map((r) => ({ ...r, volume: toNumber(r.volume), baseline: toNumber(r.baseline), target: toNumber(r.target), gap_eur: toNumber(r.gap_eur) })) as RegisterRow[]
 }
 
 const det = (r: RegisterRow, k: string): unknown => (r.detail ?? {})[k]
